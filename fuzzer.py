@@ -320,9 +320,6 @@ class Fuzzer:
             self.Error("Multiple Fuzzing signatures found.\nOnly one" +
                        " fuzzing placeholder id supported.")
 
-        if Args.SDM:
-            print self.detection_methods.key()
-
         headers = HTTPHeaders()
         method = "GET"
         if Args.TARGET:
