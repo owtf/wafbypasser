@@ -39,35 +39,12 @@ class Fuzzer:
         #####
         self.fsig = "@fuzzme@"  # fuzzing signature
         #self.detection_methods = [
-        #    self.contains,
-        #    self.resp_code_detection]
-        self.detection_methods={}
-        self.detection_methods["contains"]= self.contains
-        self.detection_methods["response_code"]= self.resp_code_detection
-        #####
-
-        #self.Start(self.GetArgs())
-
-        #testing code
-        #detection_method = self.contains
-        #detection_args = []
-        #detection_args.append("webmaster")
-        #detection_args.append(False)
-
-        #payloads = []
-        #for i in range(0, 256):  # characters  0-255
-        #    payloads.append(chr(i))
-        #reqs = self.create_GET_requests("http://localhost/xss.php?xss=@fuzzme@", payloads)
-        #reqs = self.create_GET_requests("http://localhost/@fuzzme@?xss==1", payloads)
-        #sel
-        #self.fuzz(reqs, detection_method, detection_args)
-        #h = HTTPHeaders()
-        #h.add("hello", "hej hej")
-        #h.add("Head", "test")
-        #h.add("cookie", "1234")
-        #reqs = self.create_GET_requests("http://localhost/xss.php?xss=@fuzme@", payloads,h)
-        #reqs = self.create_POST_requests("http://localhost/xss.php",payloads,"xss=:)",h)
-        #self.fuzz(reqs, detection_method, detection_args)
+        # self.contains,
+        # self.resp_code_detection]
+        #Available Detection Methods
+        self.detection_methods = {}
+        self.detection_methods["contains"] = self.contains
+        self.detection_methods["response_code"] = self.resp_code_detection
 
     #This function is has as input :
     #1)the packets to send async
@@ -215,9 +192,13 @@ class Fuzzer:
 
     def load_payload_file(self, payload_path, valid_size=100000, exclude_chars=[]):
         """This Function loads a list with payloads"""
-        file_handle = open(os.path.expanduser(payload_path), "r")
+        try:
+            file_handle = open(os.path.expanduser(payload_path), "r")
+        except IOError as e:
+            self.Error(str(e))
         payloads = []
         file_buf = file_handle.read()
+
         lines = file_buf.split("\n")
         for line in lines:
             if len(str(line)) <= valid_size:
@@ -229,6 +210,7 @@ class Fuzzer:
                 if valid:
                     payloads.append(str(line))
         print "Payload: " + str(payload_path) + " Loaded."
+        file_handle.close()
         return payloads
 
     def log(self, response):  # Not implemented yet
@@ -270,15 +252,16 @@ class Fuzzer:
         return False
 
 # Args
-# 200-300,402,404
+#Ex 200-300,402,404
     def resp_code_detection(self, response, args):
         code_range = []
         items = args[0].split(",")
         for i in range(0, len(items)):
             tokens = items[i].split("-")
             if len(tokens) == 2:
-                for j in range(int(tokens[0]), int(tokens[1])):
-                    code_range.append(j)
+                #for j in range(int(tokens[0]), int(tokens[1])):
+                    #code_range.append(j)
+                code_range.extend(range(int(tokens[0]), int(tokens[1]) + 1))
             else:
                 code_range.append(int(tokens[0]))
         #print code_range
@@ -287,7 +270,6 @@ class Fuzzer:
             return True
         else:
             return False
-
 
     def GetArgs(self):
         parser = argparse.ArgumentParser(description='OWTF WAF-BYPASER MODULE')
@@ -316,18 +298,18 @@ class Fuzzer:
         parser.add_argument("-d", "--detection_method",
                         dest="DETECTION_METHOD",
                         action='store',
-                        nargs='*',
+                        nargs='+',
                         required=True,
-                        help="DETECTION METHOD(ex -d contains 'signature')")
+                        help="DETECTION METHOD(ex -d contains 'signature')\n" +
+                        "Detection Methods:" +
+                        str(self.detection_methods.keys()))
         parser.add_argument("-pl", "--payloads",
                         dest="PAYLOADS",
                         action='store',
                         nargs='*',
                         required=True,
-                        help="FILE with payloads')")
-        args = parser.parse_args()
-
-        return args
+                        help="FILE with payloads')(Ex file1 , file2)")
+        return parser.parse_args()
 
     def Error(self, message):
         print "Error:" + message
@@ -335,7 +317,11 @@ class Fuzzer:
 
     def Start(self, Args):
         if str(Args).count(self.fsig) > 1:
-            self.Error("Multiple Fuzzing signatures found.\nOnly one fuzzing placeholder id supported.")
+            self.Error("Multiple Fuzzing signatures found.\nOnly one" +
+                       " fuzzing placeholder id supported.")
+
+        if Args.SDM:
+            print self.detection_methods.key()
 
         headers = HTTPHeaders()
         method = "GET"
@@ -353,7 +339,7 @@ class Fuzzer:
         if Args.DETECTION_METHOD:
             #if Args.DETECTION_METHOD[0] == "contains":
                 #detection_method = self.contains
-            detection_method=self.detection_methods[Args.DETECTION_METHOD[0]]
+            detection_method = self.detection_methods[Args.DETECTION_METHOD[0]]
             #elif
             detection_args = []
             detection_args = Args.DETECTION_METHOD[1:]
@@ -365,12 +351,14 @@ class Fuzzer:
                 payloads += self.load_payload_file(Args.PAYLOADS[i])
         if method == "GET":
             requests = self.create_GET_requests(target, payloads, headers)
-        else:  #  Post Packets
-            requests = self.create_POST_requests(target, payloads, data, headers)
+        else:  # Post Packets
+            requests = self.create_POST_requests(
+                target,
+                payloads,
+                data,
+                headers)
 
         self.fuzz(requests, detection_method, detection_args)
-
-
 
 if __name__ == "__main__":
     #Banner()
