@@ -56,9 +56,9 @@ class Fuzzer:
         http_client = AsyncHTTPClient()
         self.req_num = len(packets)  # number of sending requests
         self.responses = 0  # this is used for counting the responces
-        for i in range(0, len(packets)):
+        for packet in packets:
             http_client.fetch(
-                packets[i],
+                packet,
                 #lambda is used for passing arguments to the callback function
                 lambda response: self.handle_response(
                     response,
@@ -86,32 +86,31 @@ class Fuzzer:
         fuzzing_url = False
         new_url = url
         new_headers = headers
-        if url.find(self.fsig) > -1:  # check if we are fuzzing url or headers
+        key_found = ''
+        value_found = ''
+        if self.fsig in url:  # check if we are fuzzing url or headers
             fuzzing_url = True
         else:  # Fuzzing headers
             nf_headers = HTTPHeaders()  # non fuzzing headers
             #here is searching for headers that needs to be fuzzed
-            for i in range(0, len(headers.keys())):
-                header_name_pos = headers.keys()[i].find(self.fsig)
-                header_value_pos = headers[headers.keys()[i]].find(self.fsig)
+            for key, value in headers.items():
+                header_name_pos = self.fsig in key
+                header_value_pos = self.fsig in value
                 #if header does not contains the fuzzing singature
-                if header_name_pos == -1 and header_value_pos == -1:
-                    nf_headers.add(
-                        headers.keys()[i],
-                        headers[headers.keys()[i]]
-                                    )
+                if not header_name_pos and not header_value_pos:
+                    nf_headers.add(key, value)
                 else:
-                    key = headers.keys()[i]
-                    value = headers[headers.keys()[i]]
+                    key_found = key
+                    value_found = value
                     #if header_name_pos > -1:
-        for i in range(0, len(payloads)):
+        for payload in payloads:
             if fuzzing_url:
-                new_url = url.replace(self.fsig, urllib.quote_plus(payloads[i]))
+                new_url = url.replace(self.fsig, urllib.quote_plus(payload))
             else:  # fuzzing headers
                 #print nf_headers.keys()
                 new_headers = nf_headers.copy()
-                new_headers.add(key.replace(self.fsig, payloads[i]),
-                    value.replace(self.fsig, payloads[i])
+                new_headers.add(key_found.replace(self.fsig, payload),
+                    value_found.replace(self.fsig, payload)
                     )
             requests.append(self.createHTTPrequest(
                 "GET",
@@ -129,38 +128,37 @@ class Fuzzer:
         new_body = body
         new_url = url
         new_headers = headers
-        if url.find(self.fsig) > -1:  # check if we are fuzzing url or headers
+        key_found = ''
+        value_found = ''
+        if self.fsig in url:  # check if we are fuzzing url or headers
             fuzzing_url = True
-        elif body.find(self.fsig) > -1:
+        elif self.fsig in body:
             fuzzing_body = True
         else:
             nf_headers = HTTPHeaders()
 
             #here is searching for headers that needs to be fuzzed
-            for i in range(0, len(headers.keys())):
-                header_name_pos = headers.keys()[i].find(self.fsig)
-                header_value_pos = headers[headers.keys()[i]].find(self.fsig)
+            for key, value in headers.items():
+                header_name_pos = self.fsig in key
+                header_value_pos = self.fsig in value
                 #print header_name_pos
-                if header_name_pos == -1 and header_value_pos == -1:
-                    nf_headers.add(
-                        headers.keys()[i],
-                        headers[headers.keys()[i]]
-                                    )
+                if not header_name_pos and not header_value_pos:
+                    nf_headers.add(key, value)
                 else:
-                    key = headers.keys()[i]
-                    value = headers[headers.keys()[i]]
+                    key_found = key
+                    value_found = value
                     #if header_name_pos > -1:
-        for i in range(0, len(payloads)):
+        for payload in payloads:
             if fuzzing_url:
-                new_url = url.replace(self.fsig, urllib.quote_plus(payloads[i]))
+                new_url = url.replace(self.fsig, urllib.quote_plus(payload))
             elif fuzzing_body:
-                new_body = body.replace(self. fsig,
-                      urllib.quote_plus(payloads[i]))
+                new_body = body.replace(self.fsig, urllib.quote_plus(payload))
             else:  # fuzzing headers
                 #print nf_headers.keys()
                 new_headers = nf_headers.copy()
-                new_headers.add(key.replace(self.fsig, payloads[i]),
-                    value.replace(self.fsig, payloads[i])
+                new_headers.add(
+                    key_found.replace(self.fsig, payload),
+                    value_found.replace(self.fsig, payload)
                     )
             #add the new request to the list
             requests.append(self.createHTTPrequest(
@@ -192,25 +190,18 @@ class Fuzzer:
 
     def load_payload_file(self, payload_path, valid_size=100000, exclude_chars=[]):
         """This Function loads a list with payloads"""
-        try:
-            file_handle = open(os.path.expanduser(payload_path), "r")
-        except IOError as e:
-            self.Error(str(e))
         payloads = []
-        file_buf = file_handle.read()
-
-        lines = file_buf.split("\n")
-        for line in lines:
-            if len(str(line)) <= valid_size:
-                valid = True
-                for i in range(0, len(exclude_chars)):
-                    if str(line).find(exclude_chars[i]) > -1:
-                        valid = False
-                        break
-                if valid:
-                    payloads.append(str(line))
-        print "Payload: " + str(payload_path) + " Loaded."
-        file_handle.close()
+        with open(os.path.expanduser(payload_path), 'r') as f:
+            for line in f.readlines():
+                line = line.strip('\n')
+                if len(line) > valid_size:
+                    continue
+                excluded_found = [c in line for c in exclude_chars]
+                if True in excluded_found:
+                    continue
+                payloads.append(line)
+        print 'Payload: ' + payload_path + ' loaded.'
+        print '\t' + str(len(payloads)) + ' payload(s) found.'
         return payloads
 
     def log(self, response):  # Not implemented yet
@@ -233,7 +224,11 @@ class Fuzzer:
     def contains(self, response, args):
         """This function detected if the body of an http responce contains a
         specific string"""
-        phrase = args[0]  # string to search for in HTTP request body.
+        phrase = ''
+        try:
+            phrase = args[0]
+        except IndexError:
+            pass
         if len(args) == 2:
             case_sensitive = args[1]  # this is a True False flag
         else:
@@ -247,20 +242,22 @@ class Fuzzer:
         if not case_sensitive:
             phrase = phrase.lower()
             body = body.lower()
-        if body.find(phrase) > -1:
-                return True
+        if phrase in body:
+            return True
         return False
 
 # Args
 #Ex 200-300,402,404
     def resp_code_detection(self, response, args):
         code_range = []
-        items = args[0].split(",")
-        for i in range(0, len(items)):
-            tokens = items[i].split("-")
+        items = []
+        try:
+            items = args[0].split(',')
+        except IndexError:
+            pass
+        for item in items:
+            tokens = item.split('-')
             if len(tokens) == 2:
-                #for j in range(int(tokens[0]), int(tokens[1])):
-                    #code_range.append(j)
                 code_range.extend(range(int(tokens[0]), int(tokens[1]) + 1))
             else:
                 code_range.append(int(tokens[0]))
@@ -327,9 +324,9 @@ class Fuzzer:
         if Args.COOKIE:
             headers.add("Cookie", Args.COOKIE)
         if Args.HEADERS:
-            for i in range(0, len(Args.HEADERS)):
-                values = Args.HEADERS[i].split(":")
-                headers.add(values[0], values[1])
+            for header in Args.HEADERS:
+                values = header.split(':')
+                headers.add(*values)
         if Args.DATA:
             method = "POST"
             data = Args.DATA
@@ -344,8 +341,8 @@ class Fuzzer:
 #                detection_args.append(Args.DETECTION_METHOD[i])
         if Args.PAYLOADS:
             payloads = []
-            for i in range(0, len(Args.PAYLOADS)):
-                payloads += self.load_payload_file(Args.PAYLOADS[i])
+            for payload in Args.PAYLOADS:
+                payloads += self.load_payload_file(payload)
         if method == "GET":
             requests = self.create_GET_requests(target, payloads, headers)
         else:  # Post Packets
