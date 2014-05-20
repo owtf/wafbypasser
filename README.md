@@ -3,6 +3,18 @@ WAF-Byppaser Module
 
 Run example:
 
-python fuzzer.py -t 'http://127.0.0.1/xss.php' -pl xss.txt -d response_code 390-441,100 -H "HEAD:@fuzzme@" -p "var=1234" --cookie "name=user"
+Testing using ResponceCodeDetection 
+python fuzzer.py -t 'http://127.0.0.1/xss.php' -pl xss.txt -rcd '400-599,100'  -H "var:@fuzzme@" -p "var=1234" --cookie "Name=tester"
 
-python fuzzer.py -t 'http://127.0.0.1/xss.php?xss=@fuzzme@' -pl xss.txt xss2.txt -d contains "string_to_detect" --cookie "name=user"
+Reverse the ResponceCodeDetection  function (Negative testing).
+python fuzzer.py -t 'http://127.0.0.1/xss.php' -pl xss.txt -rcd '400-599'  -H "var:@fuzzme@" -p "var=1234" --cookie "Name=tester" -r
+
+
+Testing usings CoNTains text
+python fuzzer.py -t 'http://127.0.0.1/xss.php' -pl xss.txt -cnt "error"  -H "var:@fuzzme@" -p "var=1234" --cookie "Name=tester"
+
+Testing using does not CoNTains
+python fuzzer.py -t 'http://127.0.0.1/xss.php' -pl xss.txt -cnt "error"  -H "var:@fuzzme@" -p "var=1234" --cookie "Name=tester" -r
+
+Testing usings CoNTains case_senvitice text
+python fuzzer.py -t 'http://127.0.0.1/xss.php' -pl xss.txt -cnt "ErroR" cs -H "var:@fuzzme@" -p "var=1234" --cookie "Name=tester"
