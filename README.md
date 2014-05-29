@@ -18,3 +18,6 @@ python fuzzer.py -t 'http://127.0.0.1/xss.php' -pl xss.txt -cnt "error"  -H "var
 
 Testing usings CoNTains case_senvitice text
 python fuzzer.py -t 'http://127.0.0.1/xss.php' -pl xss.txt -cnt "ErroR" cs -H "var:@fuzzme@" -p "var=1234" --cookie "Name=tester"
+
+Testing for the fuzzing placeholder lenght
+python fuzzer.py -t http://demo.testfire.net?var=@length@ -cnt "long" -L A
