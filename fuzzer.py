@@ -401,10 +401,12 @@ class Fuzzer:
                             action='store',
                             nargs='*',
                             help="Additional headers (ex -header 'Name:value' 'Name2:value2')")
-        parser.add_argument("-l", "--length",
+        parser.add_argument("-L", "--length",
                             dest="LENGTH",
                             action='store',
-                            help="GET the Length of a content placeholder")
+                            nargs=1,
+                            help="Finds the Length of a content placeholder. " +
+                                 "Parameter is a valid fuzzing character(ex -L 'A')")
         parser.add_argument("-p", "--data",
                             dest="DATA",
                             action='store',
@@ -495,8 +497,9 @@ class Fuzzer:
         #####################################
 
         if Args.LENGTH:
-            len = self.find_length(target, method, self.detection_struct, '1', headers, None)
-            print "Allowed Length = " + str(len)
+            ch = Args.LENGTH[0][0]
+            length = self.find_length(target, method, self.detection_struct, ch, headers, None)
+            print "Allowed Length = " + str(length)
 
         else:  # Fuzzing using content placeholders loaded from file
             if Args.PAYLOADS:
