@@ -454,9 +454,9 @@ class Fuzzer:
         #
 
         if Args.METHOD:
-            if Args.method.upper() not in ["GET", "POST"]:
+            if Args.METHOD.upper() not in ["GET", "POST"]:
                 self.Error("This method is not Supported yet")
-            method = Args.method.upper()
+            method = Args.METHOD.upper()
         else:
             method = "GET"  # Autodetect Method
 
@@ -512,13 +512,13 @@ class Fuzzer:
 
             if method == "GET":
 
-                if self.fsig not in [str(headers), target]:
+                if not True in [self.fsig in el for el in [str(headers), target]]:
                     self.Error("Fuzzing Placeholder not found")
 
                 requests = self.create_GET_requests(target, payloads, headers)
             else:  # Post Packets
-
-                if self.fsig not in [str(headers), target,str(data)]:
+                print [str(headers), target, str(data)]
+                if not True in [self.fsig in el for el in [str(headers), target, data]]:
                     self.Error("Fuzzing Placeholder not found")
                 requests = self.create_POST_requests(
                     target,
