@@ -7,12 +7,9 @@ import os
 import argparse
 from tornado.httputil import HTTPHeaders
 import ast
-# My example:
-#curl 'http://target.com/?get_var=get_value' --data 'post_var=post_value' --cookie 'cookie_name=cookie_value'
-#curl 'http://target.com/?get_var=@@@FUZZ_HERE@@@' --data 'post_var=@@@FUZZ_HERE@@@' --cookie 'cookie_name=@@@FUZZ_HERE@@@'
-#curl 'http://target.com/?@@@FUZZ_HERE@@@=get_value' --data '@@@FUZZ_HERE@@@=post_value' --cookie '@@@FUZZ_HERE@@@=cookie_value'
-#curl 'http://target.com/@@@FUZZ_HERE@@@/?get_var=get_value' --data 'post_var=post_value' --cookie 'cookie_name=cookie_value'
-#curl 'http://target.com/@@@FUZZ_HERE@@@/?get_var=get_value' --data 'post_var={"this" : "is", "json" : "@@@FUZZ_PLACEHOLDER@@@"}' --cookie 'cookie_name=cookie_value'
+import re
+import template_parser
+
 
 
 class Fuzzer:
@@ -36,23 +33,28 @@ class Fuzzer:
         self.proxy_password = None
         #####
         self.req_counter = 0
+        self.responses = 0
         #####
-        self.lsig = "@length@"  # Length Signature
-        self.fsig = "@fuzzme@"  # fuzzing signature
+        self.sig = "@@@"
+        self.lsig = self.sig + "length" + self.sig  # Length Signature
+        self.fsig = self.sig + "fuzzhere" + self.sig  # fuzzing signature
+        self.template_sinatrure_re = self.sig + ".*" + self.sig  #templase signature regular expression
         #####
         self.detection_struct = []
 
+        self.request_payload = {}
+
+
     #This function is has as input :
     #1)the packets to send async
-    #2)A reference to a method that will detect if a response is what we are
-    #searching for
-    #3)The Argmuments for the detection function
+    #2)A detection structure (function to call and it's parameters)
     def fuzz(self, packets, detection_struct):
         ''' This is the asynchronous fuzzing engine.'''
         http_client = AsyncHTTPClient()
         self.req_num = len(packets)  # number of sending requests
         self.responses = 0  # this is used for counting the responses
         for packet in packets:
+            print id(packet)
             http_client.fetch(
                 packet,
                 #lambda is used for passing arguments to the callback function
@@ -78,40 +80,22 @@ class Fuzzer:
             print("Status: Fuzzing Completed")
 
 
+    def template_signature(self, string):
+        ret = re.search(self.template_sinatrure_re, string)
+        if ret:
+            return ret.group(0)
+        else:
+            return False
+
     def create_GET_requests(self, url, payloads, headers=None):
         """This function returns a list of GET requests which contain the
         payload"""
         requests = []
-        fuzzing_url = False
-        new_url = url
-        new_headers = headers
-        key_found = ''
-        value_found = ''
-        if self.fsig in url:  # check if we are fuzzing url or headers
-            fuzzing_url = True
-        else:  # Fuzzing headers
-            nf_headers = HTTPHeaders()  # non fuzzing headers
-            #here is searching for headers that needs to be fuzzed
-            for key, value in headers.items():
-                header_name_pos = self.fsig in key
-                header_value_pos = self.fsig in value
-                #if header does not contains the fuzzing signature
-                if not header_name_pos and not header_value_pos:
-                    nf_headers.add(key, value)
-                else:
-                    key_found = key
-                    value_found = value
-                    #if header_name_pos > -1:
+
         for payload in payloads:
-            if fuzzing_url:
-                new_url = url.replace(self.fsig, urllib.quote_plus(payload))
-            else:  # fuzzing headers
-                #print nf_headers.keys()
-                new_headers = nf_headers.copy()
-                new_headers.add(
-                    key_found.replace(self.fsig, payload),
-                    value_found.replace(self.fsig, payload)
-                )
+            new_url = self.fuzz_url(url, payload)
+            new_headers = self.fuzz_header(headers, payload)
+
             requests.append(
                 self.createHTTPrequest(
                     "GET",
@@ -121,79 +105,82 @@ class Fuzzer:
             )
         return requests
 
+    def fuzz_url(self, url, payload):
+        if self.fsig in url:
+           return url.replace(self.fsig, urllib.quote_plus(payload))
+        template_sig = self.template_signature(url)
+        if template_sig:
+            return url.replace(template_sig, payload)
+        return url
+
+    def fuzz_header(self, headers, payload):
+        raw_headers = str(headers)
+        if self.fsig in raw_headers:
+            return raw_headers.replace(self.fsig, payload)
+        template_sig = self.template_signature(raw_headers)
+        if template_sig:
+            tp = template_parser.template_parser()
+            tp.set_payload(payload)
+            header_template = self.template_signature(raw_headers)
+            #raw_headers = raw_headers.replace(header_template, repr(payload)[1:-1])  # removing extra " "
+            new_payload = repr(tp.transform(header_template, self.sig))[1:-1]
+            raw_headers = raw_headers.replace(header_template, new_payload)
+            new_headers = httputil.HTTPHeaders(ast.literal_eval(raw_headers))
+            return new_headers
+        return headers
+
+    def fuzz_body(self, body, payload):
+        if body is None:
+            return body
+        if self.fsig in body:
+            return body.replace(self.fsig, urllib.quote_plus(payload))
+        template_sig = self.template_signature(body)
+        if template_sig:
+            return body.replace(template_sig, payload)
+        return body
+
     def create_POST_requests(self, url, payloads, body, headers=None):
         """This constructs a list of POST requests which contain the
         payload"""
         requests = []
-        fuzzing_url = False
-        fuzzing_body = False
-        new_body = body
-        new_url = url
-        new_headers = headers
-        key_found = ''
-        value_found = ''
-        if self.fsig in url:  # check if we are fuzzing url or headers
-            fuzzing_url = True
-        elif self.fsig in body:
-            fuzzing_body = True
-        else:
-            nf_headers = HTTPHeaders()
-
-            #here is searching for headers that needs to be fuzzed
-            for key, value in headers.items():
-                header_name_pos = self.fsig in key
-                header_value_pos = self.fsig in value
-                #print header_name_pos
-                if not header_name_pos and not header_value_pos:
-                    nf_headers.add(key, value)
-                else:
-                    key_found = key
-                    value_found = value
-                    #if header_name_pos > -1:
         for payload in payloads:
-            if fuzzing_url:
-                new_url = url.replace(self.fsig, urllib.quote_plus(payload))
-            elif fuzzing_body:
-                new_body = body.replace(self.fsig, urllib.quote_plus(payload))
-            else:  # fuzzing headers
-                #print nf_headers.keys()
-                new_headers = nf_headers.copy()
-                new_headers.add(
-                    key_found.replace(self.fsig, payload),
-                    value_found.replace(self.fsig, payload)
-                )
-            #add the new request to the list
-            requests.append(self.createHTTPrequest(
+            new_url = self.fuzz_url(url, payload)
+            new_headers = self.fuzz_header(headers, payload)
+            new_body = self.fuzz_body(body, payload)
+            request = self.createHTTPrequest(
                 "POST",
                 new_url,
                 new_body,
-                new_headers))
+                new_headers
+                )
+            requests.append(request)
+            self.request_payload[str(id(request))] = payload
         return requests
 
-    def createHTTPrequest(self, method, url, body=None, headers=None):
-        """This function creates an HTTP request whith some additional
+    def createHTTPrequest(self, method, url, body=None, headers=None,payload=""):
+        """This function creates an HTTP request with some additional
          initialiazations"""
         return HTTPRequest(
             url=url,
             method=method,
             headers=headers,
             body=body,
-            #user_agent=self.user_agent,
+            user_agent=self.user_agent,
             follow_redirects=self.follow_redirects,
-            #use_gzip=self.gzip,
+            use_gzip=self.gzip,
             proxy_host=self.proxy_host,
             proxy_port=self.proxy_port,
             proxy_username=self.proxy_username,
             proxy_password=self.proxy_password,
             max_redirects=self.max_redirects,
             allow_nonstandard_methods=self.allow_nonstandard_methods,
-            validate_cert=self.validate_cert,
+            validate_cert=self.validate_cert
         )
 
     ###################################################
     def find_length(self, url, method, detection_struct, ch, headers, body=None):
-        #param_name = param.split("=", 1)[0]  # get the parameter name
-        #size = 4096
+        """This function finds the length of the fuzzing placeholder"""
+
         size = 8192
         minv = 0
         http_client = HTTPClient()
@@ -221,7 +208,8 @@ class Fuzzer:
                 #print response.body
             except HTTPError as e:
                 #print "Error:", e.code
-                response = e.response
+                if e.response:
+                    response = e.response
 
             for struct in detection_struct:
                 if struct[1](response, struct[2]):
@@ -230,13 +218,11 @@ class Fuzzer:
             minv = size
             size = size * 2
 
-
     def mid_value(self, minv, maxv):
         return int((minv + maxv) / 2)
 
     def binary_search(self, minv, maxv, url, method, detection_struct, ch, headers, body=None):
-        #self.counter += 1
-        #print "counter = " +str(self.counter)
+
         mid = self.mid_value(minv, maxv)
         new_url = url
         new_body = body
@@ -293,6 +279,10 @@ class Fuzzer:
         print '\t' + str(len(payloads)) + ' payload(s) found.'
         return payloads
 
+    def payload_from_request(self, request):
+        return self.request_payload[str(id(request))]
+
+
     def log(self, detection_method, response):  # Not implemented yet
         print "/^^^^^^^^^^^^^^^^^^^^^^^^^^^\\"
         print "Something Interesting Found"
@@ -302,6 +292,8 @@ class Fuzzer:
         print response.request.url
         print "Request Headers :"
         print response.request.headers
+        print "Payload"
+        print self.payload_from_request(response.request)
 
         if response.request.body is not None:
             print "Request body:"
@@ -363,10 +355,7 @@ class Fuzzer:
         except IndexError:
             pass
         items = args[0].split(',')
-        #try:
-        #    items = args[0].split(',')
-        #except IndexError:
-        #    pass
+
         for item in items:
             tokens = item.split('-')
             if len(tokens) == 2:
@@ -448,10 +437,6 @@ class Fuzzer:
         if str(Args).count(self.fsig) > 1:
             self.Error("Multiple Fuzzing signatures found.\nOnly one" +
                        " fuzzing placeholder is supported.")
-        #Important!!!
-        #if fsig & lsig in ARGS Fix
-        #
-        #
 
         if Args.METHOD:
             if Args.METHOD.upper() not in ["GET", "POST"]:
@@ -463,6 +448,8 @@ class Fuzzer:
         if Args.DATA:
             method = "POST"  # Autodetect Method
             data = Args.DATA
+        else:
+            data = ""
 
         if Args.TARGET:
             target = Args.TARGET
@@ -472,8 +459,12 @@ class Fuzzer:
             headers.add("Cookie", Args.COOKIE)
         if Args.HEADERS:
             for header in Args.HEADERS:
-                values = header.split(':')
-                headers.add(*values)
+                values = header.split(':', 1)
+                if len(values) == 2:
+                    headers.add(*values)
+                else:  # values == 1
+                    headers.add(values[0],"")
+
 
 
         if Args.CONTAINS is None and Args.RESP_CODE_DET is None:
@@ -509,17 +500,15 @@ class Fuzzer:
             else:
                 self.Error("Payloads not Specified")
 
-
             if method == "GET":
-
-                if not True in [self.fsig in el for el in [str(headers), target]]:
-                    self.Error("Fuzzing Placeholder not found")
+                #if not True in [self.fsig in el for el in [str(headers), target]]:
+                    #self.Error("Fuzzing Placeholder not found")
 
                 requests = self.create_GET_requests(target, payloads, headers)
             else:  # Post Packets
-                print [str(headers), target, str(data)]
-                if not True in [self.fsig in el for el in [str(headers), target, data]]:
-                    self.Error("Fuzzing Placeholder not found")
+                #print [str(headers), target, str(data)]
+                #if not True in [self.fsig in el for el in [str(headers), target, data]]:
+                    #self.Error("Fuzzing Placeholder not found")
                 requests = self.create_POST_requests(
                     target,
                     payloads,
