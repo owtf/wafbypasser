@@ -37,8 +37,8 @@ class Fuzzer:
         self.sig = "@@@"
         self.lsig = self.sig + "length" + self.sig  # Length Signature
         self.fsig = self.sig + "fuzzhere" + self.sig  # fuzzing signature
-        self.template_sinatrure_re = self.sig + ".*" + self.sig  #templase signature regular expression
-        #####
+        self.template_sinatrure_re = self.sig + ".*" + self.sig  # templase signature regular expression
+        # ####
         self.detection_struct = []
         self.request_payload = {}
 
@@ -65,7 +65,7 @@ class Fuzzer:
         '''This a callback function which handles the http responses.
         Is called by the fuzz function.'''
         # print response.request.url
-        #if response.error:
+        # if response.error:
         for struct in detection_struct:
             if struct[1](response, struct[2]):
                 self.log(struct[0], response)
@@ -75,6 +75,7 @@ class Fuzzer:
         if self.responses == self.req_num:  # if this is the last response
             ioloop.IOLoop.instance().stop()
             print("Status: Fuzzing Completed")
+
 
 
     def template_signature(self, string):
@@ -178,7 +179,7 @@ class Fuzzer:
         for loop in range(0, 15):  # used to avoid potensial deadloop
             payload = size * ch
             if self.lsig in url:
-                new_url = url.replace(self.lsig, payload)  #warning and etc
+                new_url = url.replace(self.lsig, payload)  # warning and etc
             elif body is not None and self.lsig in body:
                 new_body = body.replace(self.lsig, payload)
             elif headers is not None and self.lsig in str(headers):
@@ -191,9 +192,9 @@ class Fuzzer:
             request = self.createHTTPrequest(method, new_url, new_body, new_headers)
             try:
                 response = http_client.fetch(request)
-                #print response.body
+                # print response.body
             except HTTPError as e:
-                #print "Error:", e.code
+                # print "Error:", e.code
                 if e.response:
                     response = e.response
 
@@ -222,7 +223,7 @@ class Fuzzer:
         payload = ch * mid
 
         if self.lsig in url:
-            new_url = url.replace(self.lsig, payload)  #warning urlencode and etc
+            new_url = url.replace(self.lsig, payload)  # warning urlencode and etc
         elif body is not None and self.lsig in body:
             new_body = body.replace(self.lsig, payload)
         elif headers is not None and self.lsig in headers:
@@ -233,9 +234,9 @@ class Fuzzer:
         request = self.createHTTPrequest(method, new_url, new_body, new_headers)
         try:
             response = http_client.fetch(request)
-            #print response.body
+            # print response.body
         except HTTPError as e:
-            #print "Error:", e.code
+            # print "Error:", e.code
             response = e.response
 
         for struct in detection_struct:
@@ -245,7 +246,7 @@ class Fuzzer:
         http_client.close()
         return self.binary_search(mid + 1, maxv, url, method, detection_struct, ch, headers, body)
 
-    ###########################################
+    # ##########################################
     #HPP Functions
     #
     #  www.example.com?index.asp?<asp_hpp/ param_name=email >
@@ -361,21 +362,20 @@ class Fuzzer:
 
 
     def log(self, detection_method, response):  # Not implemented yet
-        print "/^^^^^^^^^^^^^^^^^^^^^^^^^^^\\"
+        print "*****************************************"
         print "Something Interesting Found"
         print "Detected with :" + detection_method
         print " --------------------------- "
-        print "Request URL:"
-        print response.request.url
-        print "Request Headers :"
+        print "URL: " + response.request.url
+        print "Post Data: " +response.request.body
+        print "Request Headers: "
+        print "Payload: " + self.payload_from_request(response.request)
         print response.request.headers
-        print "Payload"
-        print self.payload_from_request(response.request)
 
-        if response.request.body is not None:
-            print "Request body:"
-            print response.request.body
-        print "\----------------------------/"
+        #if response.request.body is not None:
+        #    print "Request body:"
+        #    print response.request.body
+        print "*****************************************"
         print
 
     #################Detection-Methods####################
@@ -453,8 +453,8 @@ class Fuzzer:
                             dest="METHOD",
                             action='store',
                             nargs="+",
-                            help="Specify Method . (ex -X GET .The option file loads all the HTTPmethods that are\
-                             in ./payload/HTTPmethods/methods.txt).")
+                            help="Specify Method . (ex -X GET .The option @method@ loads all the HTTPmethods that are\
+                             in ./payload/HTTPmethods/methods.txt). Custom methods can be defined in this file.")
 
         parser.add_argument("-C", "--cookie",
                             dest="COOKIE",
@@ -633,28 +633,13 @@ class Fuzzer:
                         requests = self.asp_hpp(method, payloads, param_name, source, target, headers, data)
 
             else:  # Fuzzing using content placeholders loaded from file
-            #if method == "GET":
-            #if not True in [self.fsig in el for el in [str(headers), target]]:
-            #self.Error("Fuzzing Placeholder not found")
-            #
-            #                    requests = self.create_GET_requests(target, payloads, headers)
-            #                else:  # Post Packets
-            #print [str(headers), target, str(data)]
-            #if not True in [self.fsig in el for el in [str(headers), target, data]]:
-            #self.Error("Fuzzing Placeholder not found")
-
-            #requests = self.create_POST_requests(
-            #    target,
-            #    payloads,
-            #    data,
-            #    headers)
 
                 requests = self.create_mal_HTTP_requests(
-                methods,
-                target,
-                payloads,
-                headers,
-                data)
+                    methods,
+                    target,
+                    payloads,
+                    headers,
+                    data)
 
             self.fuzz(requests, self.detection_struct)
 
