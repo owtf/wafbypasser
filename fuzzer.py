@@ -30,10 +30,10 @@ class Fuzzer:
         self.proxy_port = None
         self.proxy_username = None
         self.proxy_password = None
-        #####
+        # ####
         self.req_counter = 0
         self.responses = 0
-        #####
+        # ####
         self.sig = "@@@"
         self.lsig = self.sig + "length" + self.sig  # Length Signature
         self.fsig = self.sig + "fuzzhere" + self.sig  # fuzzing signature
@@ -45,7 +45,7 @@ class Fuzzer:
 
     # This function is has as input :
     # 1)the packets to send async
-    #2)A detection structure (function to call and it's parameters)
+    # 2)A detection structure (function to call and it's parameters)
     def fuzz(self, packets, detection_struct):
         ''' This is the asynchronous fuzzing engine.'''
         http_client = AsyncHTTPClient()
@@ -54,7 +54,7 @@ class Fuzzer:
         for packet in packets:
             http_client.fetch(
                 packet,
-                #lambda is used for passing arguments to the callback function
+                # lambda is used for passing arguments to the callback function
                 lambda response: self.handle_response(
                     response,
                     detection_struct))
@@ -64,7 +64,7 @@ class Fuzzer:
     def handle_response(self, response, detection_struct):
         '''This a callback function which handles the http responses.
         Is called by the fuzz function.'''
-        #print response.request.url
+        # print response.request.url
         #if response.error:
         for struct in detection_struct:
             if struct[1](response, struct[2]):
@@ -83,24 +83,8 @@ class Fuzzer:
             return ret.group(0)
         else:
             return False
-
-    def create_GET_requests(self, url, payloads, headers=None):
-        """This function returns a list of GET requests which contain the
-        payload"""
-        requests = []
-
-        for payload in payloads:
-            new_url = self.fuzz_url(url, payload)
-            new_headers = self.fuzz_header(headers, payload)
-
-            requests.append(
-                self.createHTTPrequest(
-                    "GET",
-                    new_url,
-                    None,  # no body for GET requests
-                    new_headers)
-            )
         return requests
+
 
     def fuzz_url(self, url, payload):
         if self.fsig in url:
@@ -119,7 +103,7 @@ class Fuzzer:
             tp = template_parser.template_parser()
             tp.set_payload(payload)
             header_template = self.template_signature(raw_headers)
-            #raw_headers = raw_headers.replace(header_template, repr(payload)[1:-1])  # removing extra " "
+            # raw_headers = raw_headers.replace(header_template, repr(payload)[1:-1])  # removing extra " "
             new_payload = repr(tp.transform(header_template, self.sig))[1:-1]
             raw_headers = raw_headers.replace(header_template, new_payload)
             new_headers = httputil.HTTPHeaders(ast.literal_eval(raw_headers))
@@ -136,25 +120,27 @@ class Fuzzer:
             return body.replace(template_sig, payload)
         return body
 
-    def create_POST_requests(self, url, payloads, body, headers=None):
-        """This constructs a list of POST requests which contain the
-        payload"""
+
+    def create_mal_HTTP_requests(self, methods, url, payloads, headers=None, body=None):
+        """This constructs a list of HTTP transformed requests which contain the
+        payloads"""
         requests = []
-        for payload in payloads:
-            new_url = self.fuzz_url(url, payload)
-            new_headers = self.fuzz_header(headers, payload)
-            new_body = self.fuzz_body(body, payload)
-            request = self.createHTTPrequest(
-                "POST",
-                new_url,
-                new_body,
-                new_headers
-            )
-            requests.append(request)
-            self.request_payload[str(id(request))] = payload
+        for method in methods:
+            for payload in payloads:
+                new_url = self.fuzz_url(url, payload)
+                new_headers = self.fuzz_header(headers, payload)
+                new_body = self.fuzz_body(body, payload)
+                request = self.createHTTPrequest(
+                    method,
+                    new_url,
+                    new_body,
+                    new_headers
+                )
+                requests.append(request)
+                self.request_payload[str(id(request))] = payload
         return requests
 
-    def createHTTPrequest(self, method, url, body=None, headers=None , payload=""):
+    def createHTTPrequest(self, method, url, body=None, headers=None, payload=""):
         """This function creates an HTTP request with some additional
          initialiazations"""
 
@@ -177,7 +163,7 @@ class Fuzzer:
         self.request_payload[str(id(request))] = payload
         return request
 
-    ###################################################
+    # ##################################################
     def find_length(self, url, method, detection_struct, ch, headers, body=None):
         """This function finds the length of the fuzzing placeholder"""
 
@@ -466,16 +452,21 @@ class Fuzzer:
         parser.add_argument("-X", "--request",
                             dest="METHOD",
                             action='store',
-                            help="Specify Method . (ex -X GET)")
+                            nargs="+",
+                            help="Specify Method . (ex -X GET .The option file loads all the HTTPmethods that are\
+                             in ./payload/HTTPmethods/methods.txt).")
+
         parser.add_argument("-C", "--cookie",
                             dest="COOKIE",
                             action='store',
                             help="Insert a cookie value. (ex --cookie 'var=value')")
+
         parser.add_argument("-t", "--target",
                             dest="TARGET",
                             action='store',
                             required=True,
                             help="The target url")
+
         parser.add_argument("-H", "--headers",
                             dest="HEADERS",
                             action='store',
@@ -487,11 +478,12 @@ class Fuzzer:
                             nargs=1,
                             help="Finds the Length of a content placeholder. " +
                                  "Parameter is a valid fuzzing character(ex -L 'A')")
+
         parser.add_argument("-p", "--data",
                             dest="DATA",
                             action='store',
                             help="POST data (ex --data 'var=value')")
-        #Detection Methods Args
+
         parser.add_argument("-cnt", "--contains",
                             dest="CONTAINS",
                             action='store',
@@ -507,17 +499,19 @@ class Fuzzer:
                             help="DETECTION METHOD(ex1 -rcd 200  \n)\n" +
                                  "(ex2 -rcd 400,404)+\n(ex3 rcd 200-400)\n)" +
                                  "(ex4 -rcd 100,200-300)")
+
         parser.add_argument("-r", "--reverse",
                             dest="REVERSE",
                             action='store_true',
                             help="Reverse the detection method.(Negative detection)")
-        #Payload method Args
+
         parser.add_argument("-pl", "--payloads",
                             dest="PAYLOADS",
                             action='store',
                             nargs='*',
                             #required=True,
                             help="FILE with payloads')(Ex file1 , file2)")
+
         parser.add_argument("-hpps", "--hpp_source",
                             dest="HPP_SOURCE",
                             action='store',
@@ -536,7 +530,13 @@ class Fuzzer:
                             help="ASP attacking method splits the payload at the ',' character and \
                             send an http request with multiple instances of the same parameter.")
 
+        parser.add_argument("-fs", "--fuzzing_signature",
+                            dest="FUZZING_SIG",
+                            action='store',
+                            help="The default fuzzing signature is @@@. You can change it with a custom signature.")
+
         return parser.parse_args()
+
 
     def Error(self, message):
         print "Error: " + message
@@ -547,15 +547,26 @@ class Fuzzer:
             self.Error("Multiple Fuzzing signatures found.\nOnly one" +
                        " fuzzing placeholder is supported.")
 
-        if Args.METHOD:
-            if Args.METHOD.upper() not in ["GET", "POST"]:
-                self.Error("This method is not Supported yet")
-            method = Args.METHOD.upper()
+        if Args.FUZZING_SIG:
+            self.fsig = Args.FUZZING_SIG
+
+        methods = Args.METHOD
+        if methods:
+            for method in methods:
+                if method == "@method@":
+                    methods.remove(method)
+                    methods.extend(self.load_payload_file("./payloads/HTTPmethods/methods.txt"))
+                    #removing doubles
+                    methods = list(set(methods))
+                    break
+        elif Args.DATA is None:
+            methods = []
+            methods.append("GET")  # Autodetect Method
         else:
-            method = "GET"  # Autodetect Method
+            methods = []
+            methods.append("POST")  # Autodetect Method
 
         if Args.DATA:
-            method = "POST"  # Autodetect Method
             data = Args.DATA
         else:
             data = ""
@@ -609,34 +620,41 @@ class Fuzzer:
 
             #HPP check
             hpp_attacking_method = Args.HPP_ATTACKING_METHOD
-            if hpp_attacking_method is None:
-                self.Error("--hpp_attacking_method is not specified")
-            elif hpp_attacking_method.upper() == "ASP":
-                # ASP HPP code
-                source = Args.HPP_SOURCE
-                param_name = Args.HPP_PARAM_NAME
-                if source is None:
-                    self.Error("--hpp_source is not specified")
-                elif param_name is None:
-                    self.Error("--param_name is not specified")
-                else:
-                    requests = self.asp_hpp(method, payloads, param_name, source, target, headers, data)
+            if hpp_attacking_method:
+                if hpp_attacking_method.upper() == "ASP":
+                    # ASP HPP code
+                    source = Args.HPP_SOURCE
+                    param_name = Args.HPP_PARAM_NAME
+                    if source is None:
+                        self.Error("--hpp_source is not specified")
+                    elif param_name is None:
+                        self.Error("--param_name is not specified")
+                    else:
+                        requests = self.asp_hpp(method, payloads, param_name, source, target, headers, data)
 
             else:  # Fuzzing using content placeholders loaded from file
-                if method == "GET":
-                    #if not True in [self.fsig in el for el in [str(headers), target]]:
-                    #self.Error("Fuzzing Placeholder not found")
+            #if method == "GET":
+            #if not True in [self.fsig in el for el in [str(headers), target]]:
+            #self.Error("Fuzzing Placeholder not found")
+            #
+            #                    requests = self.create_GET_requests(target, payloads, headers)
+            #                else:  # Post Packets
+            #print [str(headers), target, str(data)]
+            #if not True in [self.fsig in el for el in [str(headers), target, data]]:
+            #self.Error("Fuzzing Placeholder not found")
 
-                    requests = self.create_GET_requests(target, payloads, headers)
-                else:  # Post Packets
-                    #print [str(headers), target, str(data)]
-                    #if not True in [self.fsig in el for el in [str(headers), target, data]]:
-                    #self.Error("Fuzzing Placeholder not found")
-                    requests = self.create_POST_requests(
-                        target,
-                        payloads,
-                        data,
-                        headers)
+            #requests = self.create_POST_requests(
+            #    target,
+            #    payloads,
+            #    data,
+            #    headers)
+
+                requests = self.create_mal_HTTP_requests(
+                methods,
+                target,
+                payloads,
+                headers,
+                data)
 
             self.fuzz(requests, self.detection_struct)
 
