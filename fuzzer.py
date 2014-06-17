@@ -11,7 +11,6 @@ import re
 import template_parser
 
 
-
 class Fuzzer:
     def __init__(self):
         self.user_agent = "Mozilla/5.0 (X11; Linux x86_64)" + \
@@ -25,8 +24,8 @@ class Fuzzer:
         self.allow_nonstandard_methods = True
         self.validate_cert = False
         self.headers = None
-        #####
-        ##The proxy data would be initialized with the OWTF MiTM proxy values
+        # ####
+        # #The proxy data would be initialized with the OWTF MiTM proxy values
         self.proxy_host = None
         self.proxy_port = None
         self.proxy_username = None
@@ -41,12 +40,11 @@ class Fuzzer:
         self.template_sinatrure_re = self.sig + ".*" + self.sig  #templase signature regular expression
         #####
         self.detection_struct = []
-
         self.request_payload = {}
 
 
-    #This function is has as input :
-    #1)the packets to send async
+    # This function is has as input :
+    # 1)the packets to send async
     #2)A detection structure (function to call and it's parameters)
     def fuzz(self, packets, detection_struct):
         ''' This is the asynchronous fuzzing engine.'''
@@ -54,7 +52,6 @@ class Fuzzer:
         self.req_num = len(packets)  # number of sending requests
         self.responses = 0  # this is used for counting the responses
         for packet in packets:
-            print id(packet)
             http_client.fetch(
                 packet,
                 #lambda is used for passing arguments to the callback function
@@ -107,7 +104,7 @@ class Fuzzer:
 
     def fuzz_url(self, url, payload):
         if self.fsig in url:
-           return url.replace(self.fsig, urllib.quote_plus(payload))
+            return url.replace(self.fsig, urllib.quote_plus(payload))
         template_sig = self.template_signature(url)
         if template_sig:
             return url.replace(template_sig, payload)
@@ -152,15 +149,16 @@ class Fuzzer:
                 new_url,
                 new_body,
                 new_headers
-                )
+            )
             requests.append(request)
             self.request_payload[str(id(request))] = payload
         return requests
 
-    def createHTTPrequest(self, method, url, body=None, headers=None,payload=""):
+    def createHTTPrequest(self, method, url, body=None, headers=None , payload=""):
         """This function creates an HTTP request with some additional
          initialiazations"""
-        return HTTPRequest(
+
+        request = HTTPRequest(
             url=url,
             method=method,
             headers=headers,
@@ -176,6 +174,8 @@ class Fuzzer:
             allow_nonstandard_methods=self.allow_nonstandard_methods,
             validate_cert=self.validate_cert
         )
+        self.request_payload[str(id(request))] = payload
+        return request
 
     ###################################################
     def find_length(self, url, method, detection_struct, ch, headers, body=None):
@@ -192,7 +192,7 @@ class Fuzzer:
         for loop in range(0, 15):  # used to avoid potensial deadloop
             payload = size * ch
             if self.lsig in url:
-                new_url = url.replace(self.lsig, payload)  #warning urlencode and etc
+                new_url = url.replace(self.lsig, payload)  #warning and etc
             elif body is not None and self.lsig in body:
                 new_body = body.replace(self.lsig, payload)
             elif headers is not None and self.lsig in str(headers):
@@ -259,7 +259,98 @@ class Fuzzer:
         http_client.close()
         return self.binary_search(mid + 1, maxv, url, method, detection_struct, ch, headers, body)
 
+    ###########################################
+    #HPP Functions
+    #
+    #  www.example.com?index.asp?<asp_hpp/ param_name=email >
+    #   variable name
+    #   header, body or url
+    #   type of hpp
+    #   tokens
+    #   number of tokens (optional)
+    #  --hpp url,body,cookie param_name asp(optional)
+    #
 
+    def asp_hpp(self, method, payloads, param_name, source, url, headers, body=None):
+        requests = []
+        if "URL" in source.upper():
+            for payload in payloads:
+                new_url = self.asp_url_hpp(url, param_name, payload)
+
+                requests.append(
+                    self.createHTTPrequest(
+                        method,
+                        new_url,
+                        body,
+                        headers,
+                        payload
+                    )
+                )
+        elif "DATA" in source.upper():
+            for payload in payloads:
+                new_body = self.asp_post_hpp(body, param_name, payload)
+                requests.append(
+                    self.createHTTPrequest(
+                        method,
+                        url,
+                        new_body,
+                        headers,
+                        payload
+                    )
+                )
+        elif "COOKIE" in source.upper():
+            for payload in payloads:
+                new_headers = self.asp_cookie_hpp(headers, param_name, payload)
+                requests.append(
+                    self.createHTTPrequest(
+                        method,
+                        url,
+                        body,
+                        new_headers,
+                        payload
+                    )
+                )
+
+        return requests
+
+
+    def asp_url_hpp(self, url, param_name, payload):
+        if urlparse.urlparse(url)[4] == '':
+            sep = "?"
+        else:
+            sep = '&'
+        for pay_token in payload.split(","):
+            url += sep + param_name + "=" + pay_token
+            sep = '&'
+        return url
+
+    def asp_post_hpp(self, body, param_name, payload):
+        if body is None or body == '':
+            sep = ""
+        else:
+            sep = '&'
+        for pay_token in payload.split(","):
+            body += sep + param_name + "=" + pay_token
+            sep = '&'
+        return body
+
+    def asp_cookie_hpp(self, headers, param_name, payload):
+        new_headers = headers.copy()
+        try:
+            cookie_value = new_headers['Cookie']
+            del new_headers["Cookie"]
+            sep = "&"
+        except KeyError:
+            cookie_value = ""
+            sep = ""
+        for pay_token in payload.split(","):
+            cookie_value += sep + param_name + "=" + pay_token
+            sep = '&'
+        new_headers.add("Cookie", cookie_value)
+        return new_headers
+
+
+    ###########################################
     def load_payload_file(self, payload_path, valid_size=100000, exclude_chars=[]):
         """This Function loads a list with payloads"""
         payloads = []
@@ -427,6 +518,24 @@ class Fuzzer:
                             nargs='*',
                             #required=True,
                             help="FILE with payloads')(Ex file1 , file2)")
+        parser.add_argument("-hpps", "--hpp_source",
+                            dest="HPP_SOURCE",
+                            action='store',
+                            choices=['url', 'data', 'cookie'],
+                            help="Options: URL, DATA or COOKIE")
+
+        parser.add_argument("-hppp", "--hpp_param_name",
+                            dest="HPP_PARAM_NAME",
+                            action='store',
+                            help="HPP parameter name")
+
+        parser.add_argument("-hppa", "--hpp_attack_method",
+                            dest="HPP_ATTACKING_METHOD",
+                            action='store',
+                            choices=['asp'],
+                            help="ASP attacking method splits the payload at the ',' character and \
+                            send an http request with multiple instances of the same parameter.")
+
         return parser.parse_args()
 
     def Error(self, message):
@@ -463,9 +572,7 @@ class Fuzzer:
                 if len(values) == 2:
                     headers.add(*values)
                 else:  # values == 1
-                    headers.add(values[0],"")
-
-
+                    headers.add(values[0], "")
 
         if Args.CONTAINS is None and Args.RESP_CODE_DET is None:
             self.Error("You need to specify a detection method")
@@ -492,7 +599,7 @@ class Fuzzer:
             length = self.find_length(target, method, self.detection_struct, ch, headers, None)
             print "Allowed Length = " + str(length)
 
-        else:  # Fuzzing using content placeholders loaded from file
+        else:
             if Args.PAYLOADS:
                 payloads = []
                 for payload in Args.PAYLOADS:
@@ -500,26 +607,42 @@ class Fuzzer:
             else:
                 self.Error("Payloads not Specified")
 
-            if method == "GET":
-                #if not True in [self.fsig in el for el in [str(headers), target]]:
+            #HPP check
+            hpp_attacking_method = Args.HPP_ATTACKING_METHOD
+            if hpp_attacking_method is None:
+                self.Error("--hpp_attacking_method is not specified")
+            elif hpp_attacking_method.upper() == "ASP":
+                # ASP HPP code
+                source = Args.HPP_SOURCE
+                param_name = Args.HPP_PARAM_NAME
+                if source is None:
+                    self.Error("--hpp_source is not specified")
+                elif param_name is None:
+                    self.Error("--param_name is not specified")
+                else:
+                    requests = self.asp_hpp(method, payloads, param_name, source, target, headers, data)
+
+            else:  # Fuzzing using content placeholders loaded from file
+                if method == "GET":
+                    #if not True in [self.fsig in el for el in [str(headers), target]]:
                     #self.Error("Fuzzing Placeholder not found")
 
-                requests = self.create_GET_requests(target, payloads, headers)
-            else:  # Post Packets
-                #print [str(headers), target, str(data)]
-                #if not True in [self.fsig in el for el in [str(headers), target, data]]:
+                    requests = self.create_GET_requests(target, payloads, headers)
+                else:  # Post Packets
+                    #print [str(headers), target, str(data)]
+                    #if not True in [self.fsig in el for el in [str(headers), target, data]]:
                     #self.Error("Fuzzing Placeholder not found")
-                requests = self.create_POST_requests(
-                    target,
-                    payloads,
-                    data,
-                    headers)
+                    requests = self.create_POST_requests(
+                        target,
+                        payloads,
+                        data,
+                        headers)
 
             self.fuzz(requests, self.detection_struct)
 
 
 if __name__ == "__main__":
-    #Banner()
+    # Banner()
     fuzzer = Fuzzer()
     arguments = fuzzer.GetArgs()
     fuzzer.Start(arguments)
