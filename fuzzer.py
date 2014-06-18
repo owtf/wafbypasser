@@ -41,6 +41,7 @@ class Fuzzer:
         # ####
         self.detection_struct = []
         self.request_payload = {}
+        self.detections = 0
 
 
     # This function is has as input :
@@ -70,12 +71,82 @@ class Fuzzer:
             if struct[1](response, struct[2]):
                 self.log(struct[0], response)
                 continue
-        #print response.request.url
+        # print response.request.url
         self.responses += 1
         if self.responses == self.req_num:  # if this is the last response
             ioloop.IOLoop.instance().stop()
             print("Status: Fuzzing Completed")
+            print "Number of Detected Requests: " + str(self.detections)
 
+    def add_url_param(self, url, param_name, param_value):
+        if urlparse.urlparse(url)[4] == '':
+            sep = "?"
+        else:
+            sep = '&'
+        url += sep + param_name + "=" + param_value
+        return url
+
+    def add_body_param(self, body, param_name, param_value):
+        if body is None or body == '':
+            sep = ""
+        else:
+            sep = '&'
+        body += sep + param_name + "=" + param_value
+        return body
+
+    def add_cookie_param(self, headers, param_name, param_value):
+        new_headers = headers.copy()
+        try:
+            cookie_value = new_headers['Cookie']
+            del new_headers["Cookie"]
+            sep = "&"
+        except KeyError:
+            cookie_value = ""
+            sep = ""
+
+        cookie_value += sep + param_name + "=" + param_value
+        new_headers.add("Cookie", cookie_value)
+        return new_headers
+
+
+    def add_header_param(self, headers, param_name, param_value):
+        new_headers = headers.copy()
+        try:
+            del new_headers[param_name]
+        except KeyError:
+            pass
+        new_headers.add(param_name, param_value)
+        return new_headers
+
+    def detect_accepted_sources(self, url, data, headers, param_name, param_source, param_value, methods, valid_method):
+        requests = []
+        sources = ['URL', 'DATA', 'COOKIE', 'HEADER']
+
+        for method in methods:
+            for source in sources:
+                new_url = url
+                new_data = data
+                new_headers = headers.copy()
+
+                if source is "URL":
+                    new_url = self.add_url_param(url, param_name, param_value)
+                elif source is "DATA":
+                    new_data = self.add_body_param(data, param_name, param_value)
+                elif source is "COOKIE":
+                    new_headers = self.add_cookie_param(new_headers, param_name, param_value)
+                elif source is "HEADER":
+                    new_headers = self.add_cookie_param(new_headers, param_name, param_value)
+
+                request = self.createHTTPrequest(
+                    method,
+                    new_url,
+                    new_data,
+                    new_headers
+                )
+                requests.append(request)
+                self.request_payload[str(id(request))] = param_value
+
+        return requests
 
 
     def template_signature(self, string):
@@ -95,6 +166,7 @@ class Fuzzer:
             return url.replace(template_sig, payload)
         return url
 
+
     def fuzz_header(self, headers, payload):
         raw_headers = str(headers)
         if self.fsig in raw_headers:
@@ -110,6 +182,7 @@ class Fuzzer:
             new_headers = httputil.HTTPHeaders(ast.literal_eval(raw_headers))
             return new_headers
         return headers
+
 
     def fuzz_body(self, body, payload):
         if body is None:
@@ -141,6 +214,7 @@ class Fuzzer:
                 self.request_payload[str(id(request))] = payload
         return requests
 
+
     def createHTTPrequest(self, method, url, body=None, headers=None, payload=""):
         """This function creates an HTTP request with some additional
          initialiazations"""
@@ -163,6 +237,7 @@ class Fuzzer:
         )
         self.request_payload[str(id(request))] = payload
         return request
+
 
     # ##################################################
     def find_length(self, url, method, detection_struct, ch, headers, body=None):
@@ -205,11 +280,12 @@ class Fuzzer:
             minv = size
             size = size * 2
 
+
     def mid_value(self, minv, maxv):
         return int((minv + maxv) / 2)
 
-    def binary_search(self, minv, maxv, url, method, detection_struct, ch, headers, body=None):
 
+    def binary_search(self, minv, maxv, url, method, detection_struct, ch, headers, body=None):
         mid = self.mid_value(minv, maxv)
         new_url = url
         new_body = body
@@ -246,11 +322,13 @@ class Fuzzer:
         http_client.close()
         return self.binary_search(mid + 1, maxv, url, method, detection_struct, ch, headers, body)
 
-    # ##########################################
-    #HPP Functions
+        # ##########################################
+
+
+    # HPP Functions
     #
-    #  www.example.com?index.asp?<asp_hpp/ param_name=email >
-    #   variable name
+    # www.example.com?index.asp?<asp_hpp/ param_name=email >
+    # variable name
     #   header, body or url
     #   type of hpp
     #   tokens
@@ -311,6 +389,7 @@ class Fuzzer:
             sep = '&'
         return url
 
+
     def asp_post_hpp(self, body, param_name, payload):
         if body is None or body == '':
             sep = ""
@@ -320,6 +399,7 @@ class Fuzzer:
             body += sep + param_name + "=" + pay_token
             sep = '&'
         return body
+
 
     def asp_cookie_hpp(self, headers, param_name, payload):
         new_headers = headers.copy()
@@ -357,6 +437,7 @@ class Fuzzer:
         print '\t' + str(len(payloads)) + ' payload(s) found.'
         return payloads
 
+
     def payload_from_request(self, request):
         return self.request_payload[str(id(request))]
 
@@ -367,16 +448,18 @@ class Fuzzer:
         print "Detected with :" + detection_method
         print " --------------------------- "
         print "URL: " + response.request.url
-        print "Post Data: " +response.request.body
+        print "Method: " + response.request.method
+        if response.request.body is not None:
+            print "Post Data: " + response.request.body
         print "Request Headers: "
         print "Payload: " + self.payload_from_request(response.request)
         print response.request.headers
 
-        #if response.request.body is not None:
-        #    print "Request body:"
-        #    print response.request.body
         print "*****************************************"
         print
+        self.detections += 1
+
+
 
     #################Detection-Methods####################
     #Each detection method takes as input an HTTP request and a list with extra args
@@ -421,6 +504,7 @@ class Fuzzer:
             return True
         return False
 
+
     # Args
     #Ex 200-300,402,404
     def resp_code_detection(self, response, args):
@@ -454,7 +538,7 @@ class Fuzzer:
                             action='store',
                             nargs="+",
                             help="Specify Method . (ex -X GET .The option @method@ loads all the HTTPmethods that are\
-                             in ./payload/HTTPmethods/methods.txt). Custom methods can be defined in this file.")
+                                 in ./payload/HTTPmethods/methods.txt). Custom methods can be defined in this file.")
 
         parser.add_argument("-C", "--cookie",
                             dest="COOKIE",
@@ -528,12 +612,40 @@ class Fuzzer:
                             action='store',
                             choices=['asp'],
                             help="ASP attacking method splits the payload at the ',' character and \
-                            send an http request with multiple instances of the same parameter.")
+                                send an http request with multiple instances of the same parameter.")
 
         parser.add_argument("-fs", "--fuzzing_signature",
                             dest="FUZZING_SIG",
                             action='store',
                             help="The default fuzzing signature is @@@. You can change it with a custom signature.")
+
+        parser.add_argument("-das", "--detect_allowed_sources",
+                            dest="DETECT_ALLOWED_SOURCES",
+                            action='store_true',
+                            help="This functionality detects the the allowed sources for a parameter.\
+                                 (Ex if the web app is handling a parameter in way like $REQUEST[param]).\
+                                  ")
+
+        parser.add_argument("-am", "--accepted_method",
+                            dest="ACCEPTED_METHOD",
+                            action='store',
+                            help="The accepted Method")
+
+        parser.add_argument("-apv", "--accepted_param_value",
+                            dest="ACCEPTED_PARAM_VALUE",
+                            action='store',
+                            help="Accepted parameter value")
+
+        parser.add_argument("-pn", "--param_name",
+                            dest="PARAM_NAME",
+                            action='store',
+                            help="Testing parameter name")
+
+        parser.add_argument("-ps", "--param_source",
+                            dest="PARAM_SOURCE",
+                            action='store',
+                            choices=['URL', 'DATA', 'COOKIE', 'HEADER'],
+                            help="Specifies the parameters position.")
 
         return parser.parse_args()
 
@@ -541,6 +653,7 @@ class Fuzzer:
     def Error(self, message):
         print "Error: " + message
         exit(-1)
+
 
     def Start(self, Args):
         if str(Args).count(self.fsig) > 1:
@@ -559,12 +672,12 @@ class Fuzzer:
                     #removing doubles
                     methods = list(set(methods))
                     break
-        elif Args.DATA is None:
-            methods = []
-            methods.append("GET")  # Autodetect Method
         else:
-            methods = []
-            methods.append("POST")  # Autodetect Method
+            methods=[]
+            if Args.DATA is None:
+                methods.append("GET")  # Autodetect Method
+            else:
+                methods.append("POST")  # Autodetect Method
 
         if Args.DATA:
             data = Args.DATA
@@ -605,12 +718,41 @@ class Fuzzer:
             self.detection_struct.append(["Response Code Detection", self.resp_code_detection, detection_args])
         #####################################
 
+
         if Args.LENGTH:
             ch = Args.LENGTH[0][0]
             length = self.find_length(target, method, self.detection_struct, ch, headers, None)
             print "Allowed Length = " + str(length)
 
+        elif Args.DETECT_ALLOWED_SOURCES:
+
+            accepted_method = Args.ACCEPTED_METHOD
+            param_name = Args.PARAM_NAME
+            param_value = Args.ACCEPTED_PARAM_VALUE
+            param_source = Args.PARAM_SOURCE
+
+            if accepted_method is None:
+                self.Error("--accepted_method is not specified.")
+            if param_name is None:
+                self.Error("--param_name is not specified.")
+            if param_value is None:
+                self.Error("--param_value is not specified.")
+            if param_source is None:
+                self.Error("--param_source is not specified.")
+
+            methods = self.load_payload_file("./payloads/HTTPmethods/methods.txt")
+            requests = self.detect_accepted_sources(
+                target,
+                data,
+                headers,
+                param_name,
+                param_source,
+                param_value,
+                methods,
+                accepted_method)
+
         else:
+
             if Args.PAYLOADS:
                 payloads = []
                 for payload in Args.PAYLOADS:
@@ -641,7 +783,7 @@ class Fuzzer:
                     headers,
                     data)
 
-            self.fuzz(requests, self.detection_struct)
+        self.fuzz(requests, self.detection_struct)
 
 
 if __name__ == "__main__":
