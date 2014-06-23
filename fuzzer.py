@@ -306,7 +306,6 @@ class Fuzzer:
             raw_val = str(headers)
             raw_val = raw_val.replace(self.lsig, payload)
             new_headers = ast.literal_eval(str(raw_val))
-
         request = self.createHTTPrequest(method, new_url, new_body, new_headers)
         try:
             response = http_client.fetch(request)
@@ -721,7 +720,7 @@ class Fuzzer:
 
         if Args.LENGTH:
             ch = Args.LENGTH[0][0]
-            length = self.find_length(target, method, self.detection_struct, ch, headers, None)
+            length = self.find_length(target, methods[0], self.detection_struct, ch, headers, None)
             print "Allowed Length = " + str(length)
 
         elif Args.DETECT_ALLOWED_SOURCES:
@@ -782,8 +781,8 @@ class Fuzzer:
                     payloads,
                     headers,
                     data)
-
-        self.fuzz(requests, self.detection_struct)
+        if not Args.LENGTH:
+            self.fuzz(requests, self.detection_struct)
 
 
 if __name__ == "__main__":
