@@ -17,7 +17,11 @@ class XML_Analyzer(object):
     It is a helper class for template parser.
     The methods that it contains are the parsing events,"""
 
-
+    #In the stack there are stored 3 types of values (A F and D).
+    # A stands for attribute. The XML attributes are translated as parameters for the equivalant function
+    # D stands for DATA
+    # F stands for Function
+        
     def __init__(self, linking_table):
         self.stack = []
         self.encoded_string = ""
