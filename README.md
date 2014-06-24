@@ -35,5 +35,5 @@ Detecting Allowed sources
 python wafbypasser.py -t http://127.0.0.1/xss.php --contains 'whatever' --detect_allowed_sources --accepted_method GET --param_name xss --accepted_param_value test --param_source URL
 
 Fuzzing using templates and transforming payloads
-The tranformation functions are defined in the 
-python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=@@@<reverse><payload/><reverse/>@@@' -pl xss2.txt -rcd '200-599,100'
+The tranformation functions are defined in the obfuscation_lib.py.
+python wafbypasser.py -t 'http://127.0.0.1/xss.php?' -pl xss2.txt -rcd '200-599,100' --data "xss=@@@<reverse><payload/></reverse>@@@"

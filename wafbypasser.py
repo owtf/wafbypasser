@@ -164,7 +164,10 @@ class wafbyppaser:
             return url.replace(self.fsig, urllib.quote_plus(payload))
         template_sig = self.template_signature(url)
         if template_sig:
-            return url.replace(template_sig, payload)
+            tp = template_parser.template_parser()
+            tp.set_payload(payload)
+            new_payload = repr(tp.transform(self.template_signature(url), self.sig))[1:-1]  # removing extra " "
+            return url.replace(template_sig, new_payload)
         return url
 
 
@@ -192,7 +195,10 @@ class wafbyppaser:
             return body.replace(self.fsig, urllib.quote_plus(payload))
         template_sig = self.template_signature(body)
         if template_sig:
-            return body.replace(template_sig, payload)
+            tp = template_parser.template_parser()
+            tp.set_payload(payload)
+            new_payload = repr(tp.transform(self.template_signature(body), self.sig))[1:-1]  # removing extra " "
+            return body.replace(template_sig, new_payload)
         return body
 
 
@@ -320,6 +326,7 @@ class wafbyppaser:
                 http_client.close()
                 return self.binary_search(minv, mid - 1, url, method, detection_struct, ch, headers, body)
         http_client.close()
+
         return self.binary_search(mid + 1, maxv, url, method, detection_struct, ch, headers, body)
 
         # ##########################################
@@ -355,25 +362,27 @@ class wafbyppaser:
         elif "DATA" in source.upper():
             for payload in payloads:
                 new_body = self.asp_post_hpp(body, param_name, payload)
-                requests.append(
-                    self.createHTTPrequest(
-                        method,
-                        url,
-                        new_body,
-                        headers,
-                        payload
+                for method in methods:
+                    requests.append(
+                        self.createHTTPrequest(
+                            method,
+                            url,
+                            new_body,
+                            headers,
+                            payload
                     )
                 )
         elif "COOKIE" in source.upper():
             for payload in payloads:
                 new_headers = self.asp_cookie_hpp(headers, param_name, payload)
-                requests.append(
-                    self.createHTTPrequest(
-                        method,
-                        url,
-                        body,
-                        new_headers,
-                        payload
+                for method in methods:
+                    requests.append(
+                        self.createHTTPrequest(
+                            method,
+                            url,
+                            body,
+                            new_headers,
+                            payload
                     )
                 )
 
