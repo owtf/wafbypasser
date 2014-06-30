@@ -33,7 +33,7 @@ class XMLAnalyzer(object):
             return
 
         self.stack.append(["F", function])
-        if len(dict(attrib)) != 0:
+        if dict(attrib):
             self.stack.append(["A", attrib])
 
     def end(self, tag):
@@ -53,8 +53,8 @@ class XMLAnalyzer(object):
 
         if element[0] == 'A':
             args = element[1]
-            for key, value in args.iteritems():
-                    arglist.append(value)
+            for value in args.itervalues():
+                arglist.append(value)
             function = self.stack.pop()[1]
         else:
             function = element[1]
@@ -102,12 +102,10 @@ class TemplateParser(object):
         self.linking_table(functions)
 
     def transform(self, xml_string, signature="@@@"):
-        xml_string = xml_string.replace(signature,"<transform_payload>",1)
-        xml_string = xml_string.replace(signature,"</transform_payload>",1)
+        xml_string = xml_string.replace(signature, "<transform_payload>", 1)
+        xml_string = xml_string.replace(signature, "</transform_payload>", 1)
         self.parser = etree.XMLParser(target=XMLAnalyzer(self.linking_table))
         return etree.XML(xml_string, self.parser)
 
     def payload(self):
-        if self.payload_data:
-            return self.payload_data
-        return ""
+        return self.payload_data or ''

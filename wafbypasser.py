@@ -16,8 +16,8 @@ from template_parser import TemplateParser
 
 class WafBypasser:
     def __init__(self):
-        self.user_agent = "Mozilla/5.0 (X11; Linux x86_64)" + \
-                          "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" + \
+        self.user_agent = "Mozilla/5.0 (X11; Linux x86_64)" \
+                          "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" \
                           "34.0.1847.132 Safari/537.36"
         self.auth_username = None
         self.auth_password = None
@@ -71,7 +71,6 @@ class WafBypasser:
         for struct in detection_struct:
             if struct[1](response, struct[2]):
                 self.log(struct[0], response)
-                continue
         self.responses += 1
         if self.responses == self.req_num:  # if this is the last response
             ioloop.IOLoop.instance().stop()
@@ -97,8 +96,7 @@ class WafBypasser:
     def add_cookie_param(self, headers, param_name, param_value):
         new_headers = headers.copy()
         try:
-            cookie_value = new_headers['Cookie']
-            del new_headers["Cookie"]
+            cookie_value = new_headers.pop('Cookie')
             sep = "&"
         except KeyError:
             cookie_value = ""
@@ -110,17 +108,13 @@ class WafBypasser:
 
     def add_header_param(self, headers, param_name, param_value):
         new_headers = headers.copy()
-        try:
-            del new_headers[param_name]
-        except KeyError:
-            pass
+        new_headers.pop(param_name)
         new_headers.add(param_name, param_value)
         return new_headers
 
     def detect_accepted_sources(self, url, data, headers, param_name, param_source, param_value, methods, valid_method):
         requests = []
         sources = ['URL', 'DATA', 'COOKIE', 'HEADER']
-
         for method in methods:
             for source in sources:
                 new_url = url
@@ -144,16 +138,13 @@ class WafBypasser:
                 )
                 requests.append(request)
                 self.request_payload[str(id(request))] = param_value
-
         return requests
 
     def template_signature(self, string):
         ret = re.search(self.template_sinatrure_re, string)
         if ret:
             return ret.group(0)
-        else:
-            return False
-        return requests
+        return False
 
     def fuzz_url(self, url, payload):
         if self.fsig in url:
@@ -242,11 +233,9 @@ class WafBypasser:
         size = 8192
         minv = 0
         http_client = HTTPClient()
-
         new_url = url
         new_body = body
         new_headers = headers
-
         for loop in range(0, 15):  # used to avoid potensial deadloop
             payload = size * ch
             if self.lsig in url:
@@ -263,9 +252,7 @@ class WafBypasser:
             request = self.createHTTPrequest(method, new_url, new_body, new_headers)
             try:
                 response = http_client.fetch(request)
-                # print response.body
             except HTTPError as e:
-                # print "Error:", e.code
                 if e.response:
                     response = e.response
 
@@ -302,9 +289,7 @@ class WafBypasser:
         request = self.createHTTPrequest(method, new_url, new_body, new_headers)
         try:
             response = http_client.fetch(request)
-            # print response.body
         except HTTPError as e:
-            # print "Error:", e.code
             response = e.response
 
         for struct in detection_struct:
@@ -331,17 +316,16 @@ class WafBypasser:
         if "URL" in source.upper():
             for payload in payloads:
                 new_url = self.asp_url_hpp(url, param_name, payload)
-
                 for method in methods:
-                 requests.append(
-                    self.createHTTPrequest(
-                    method,
-                    new_url,
-                    body,
-                    headers,
-                    payload
+                    requests.append(
+                        self.createHTTPrequest(
+                            method,
+                            new_url,
+                            body,
+                            headers,
+                            payload
+                        )
                     )
-                )
         elif "DATA" in source.upper():
             for payload in payloads:
                 new_body = self.asp_post_hpp(body, param_name, payload)
@@ -368,7 +352,6 @@ class WafBypasser:
                             payload
                     )
                 )
-
         return requests
 
     def asp_url_hpp(self, url, param_name, payload):
@@ -394,8 +377,7 @@ class WafBypasser:
     def asp_cookie_hpp(self, headers, param_name, payload):
         new_headers = headers.copy()
         try:
-            cookie_value = new_headers['Cookie']
-            del new_headers["Cookie"]
+            cookie_value = new_headers.pop('Cookie')
             sep = "&"
         except KeyError:
             cookie_value = ""
@@ -467,7 +449,7 @@ class WafBypasser:
             pass
 
         if response.body is None:
-            if len(phrase) == 0:
+            if not phrase:
                 if reverse:
                     return False
                 return True
@@ -506,8 +488,6 @@ class WafBypasser:
                 code_range.extend(range(int(tokens[0]), int(tokens[1]) + 1))
             else:
                 code_range.append(int(tokens[0]))
-        #print code_range
-        #print response.code
         ret = response.code in code_range
         if reverse:
             return not ret
