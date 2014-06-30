@@ -2,18 +2,6 @@ from lxml import etree
 import obfuscation_lib
 
 
-def reverse(string):
-    return string[::-1]
-
-
-def replace(string, old, new):
-    return string.replace(old, new)
-
-
-def payload():
-    return "payload"
-
-
 class XMLAnalyzer(object):
 
     """Analyzes the XML input tags and performs multiple transformations.
