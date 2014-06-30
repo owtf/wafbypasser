@@ -18,12 +18,11 @@ def get_transformations():
         "reverse": reverse,
         "remove_newlines": remove_newlines,
         "remove_spaces": remove_spaces
-
     }
+
 
 def base64(string):
     return standard_b64encode(string)
-
 
 
 def urlsafe_base64(string):
@@ -54,6 +53,7 @@ html_escape_table = {
     "<": "&lt;",
 }
 
+
 # credits https://wiki.python.org/moin/EscapingHtml
 def html_escape(text):
     """Produce entities within text."""
@@ -79,9 +79,11 @@ def replace(string, old, new):
 def reverse(string):
     return string[::-1]
 
+
 def remove_newlines(string):
     string = string.replace("\n", "");
     return string.replace("\r", "")
+
 
 def remove_spaces(string):
     return string.replace(" ", "")
