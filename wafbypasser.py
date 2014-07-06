@@ -8,13 +8,11 @@ import argparse
 
 from tornado import ioloop
 from tornado.httpclient import *
-from tornado.httputil import *
 from tornado.httputil import HTTPHeaders
-
 from template_parser import TemplateParser
 
 
-class WafBypasser:
+class WAFBypasser:
     def __init__(self):
         self.user_agent = "Mozilla/5.0 (X11; Linux x86_64)" \
                           "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/" \
@@ -36,16 +34,16 @@ class WafBypasser:
         # ####
         self.req_counter = 0
         self.responses = 0
+        self.req_num = 0
         # ####
         self.sig = "@@@"
         self.lsig = self.sig + "length" + self.sig  # Length Signature
         self.fsig = self.sig + "fuzzhere" + self.sig  # fuzzing signature
-        self.template_sinatrure_re = self.sig + ".*" + self.sig  # templase signature regular expression
+        # template signature regular expression
+        self.template_signature_re = self.sig + ".*" + self.sig
         # ####
         self.detection_struct = []
-        self.request_payload = {}
-        self.detections = 0
-
+        self.requests_table = {}
 
     # This function is has as input :
     # 1)the packets to send async
@@ -68,14 +66,18 @@ class WafBypasser:
     def handle_response(self, response, detection_struct):
         '''This a callback function which handles the http responses.
         Is called by the fuzz function.'''
+        detected = False
         for struct in detection_struct:
             if struct[1](response, struct[2]):
                 self.log(struct[0], response)
+                self.requests_table[id(response.request)]["detected"] = True
+                detected = True
+        if not detected:
+            self.requests_table[id(response.request)]["detected"] = True
         self.responses += 1
         if self.responses == self.req_num:  # if this is the last response
             ioloop.IOLoop.instance().stop()
             print("Status: Fuzzing Completed")
-            print "Number of Detected Requests: " + str(self.detections)
 
     def add_url_param(self, url, param_name, param_value):
         if urlparse.urlparse(url)[4] == '':
@@ -112,7 +114,9 @@ class WafBypasser:
         new_headers.add(param_name, param_value)
         return new_headers
 
-    def detect_accepted_sources(self, url, data, headers, param_name, param_source, param_value, methods, valid_method):
+    def detect_accepted_sources(self, url, data, headers, param_name,
+                                param_source, param_value, methods,
+                                valid_method):
         requests = []
         sources = ['URL', 'DATA', 'COOKIE', 'HEADER']
         for method in methods:
@@ -124,11 +128,17 @@ class WafBypasser:
                 if source is "URL":
                     new_url = self.add_url_param(url, param_name, param_value)
                 elif source is "DATA":
-                    new_data = self.add_body_param(data, param_name, param_value)
+                    new_data = self.add_body_param(data,
+                                                   param_name,
+                                                   param_value)
                 elif source is "COOKIE":
-                    new_headers = self.add_cookie_param(new_headers, param_name, param_value)
+                    new_headers = self.add_cookie_param(new_headers,
+                                                        param_name,
+                                                        param_value)
                 elif source is "HEADER":
-                    new_headers = self.add_cookie_param(new_headers, param_name, param_value)
+                    new_headers = self.add_cookie_param(new_headers,
+                                                        param_name,
+                                                        param_value)
 
                 request = self.createHTTPrequest(
                     method,
@@ -137,11 +147,11 @@ class WafBypasser:
                     new_headers
                 )
                 requests.append(request)
-                self.request_payload[str(id(request))] = param_value
+
         return requests
 
     def template_signature(self, string):
-        ret = re.search(self.template_sinatrure_re, string)
+        ret = re.search(self.template_signature_re, string)
         if ret:
             return ret.group(0)
         return False
@@ -153,7 +163,9 @@ class WafBypasser:
         if template_sig:
             tp = TemplateParser()
             tp.set_payload(payload)
-            new_payload = repr(tp.transform(self.template_signature(url), self.sig))[1:-1]  # removing extra " "
+            new_payload = repr(
+                tp.transform(self.template_signature(url),
+                             self.sig))[1:-1]  # removing extra " "
             return url.replace(template_sig, new_payload)
         return url
 
@@ -167,7 +179,9 @@ class WafBypasser:
             tp = TemplateParser()
             tp.set_payload(payload)
             header_template = self.template_signature(raw_headers)
-            new_payload = repr(tp.transform(header_template, self.sig))[1:-1]  # removing extra " "
+            new_payload = repr(
+                tp.transform(header_template,
+                             self.sig))[1:-1]  # removing extra " "
             raw_headers = raw_headers.replace(header_template, new_payload)
             new_headers = httputil.HTTPHeaders(ast.literal_eval(raw_headers))
             return new_headers
@@ -182,13 +196,16 @@ class WafBypasser:
         if template_sig:
             tp = TemplateParser()
             tp.set_payload(payload)
-            new_payload = repr(tp.transform(self.template_signature(body), self.sig))[1:-1]  # removing extra " "
+            new_payload = repr(
+                tp.transform(self.template_signature(body),
+                             self.sig))[1:-1]  # removing extra " "
             return body.replace(template_sig, new_payload)
         return body
 
-    def create_mal_HTTP_requests(self, methods, url, payloads, headers=None, body=None):
-        """This constructs a list of HTTP transformed requests which contain the
-        payloads"""
+    def create_mal_HTTP_requests(self, methods, url, payloads,
+                                 headers=None, body=None):
+        """This constructs a list of HTTP transformed requests which contain
+        the payloads"""
         requests = []
         for method in methods:
             for payload in payloads:
@@ -202,12 +219,13 @@ class WafBypasser:
                     new_headers
                 )
                 requests.append(request)
-                self.request_payload[str(id(request))] = payload
+                self.requests_table[id(request)]["payload"] = payload
         return requests
 
-    def createHTTPrequest(self, method, url, body=None, headers=None, payload=""):
+    def createHTTPrequest(self, method, url, body=None,
+                          headers=None, payload=""):
         """This function creates an HTTP request with some additional
-         initialiazations"""
+         initializations"""
         request = HTTPRequest(
             url=url,
             method=method,
@@ -224,11 +242,14 @@ class WafBypasser:
             allow_nonstandard_methods=self.allow_nonstandard_methods,
             validate_cert=self.validate_cert
         )
-        self.request_payload[str(id(request))] = payload
+        self.requests_table[id(request)] = {
+            "payload": payload,
+            "request": request}
+
         return request
 
-    # ##################################################
-    def find_length(self, url, method, detection_struct, ch, headers, body=None):
+    def find_length(self, url, method, detection_struct, ch, headers,
+                    body=None):
         """This function finds the length of the fuzzing placeholder"""
         size = 8192
         minv = 0
@@ -249,7 +270,10 @@ class WafBypasser:
             else:
                 self.Error("Length signature not found!")
 
-            request = self.createHTTPrequest(method, new_url, new_body, new_headers)
+            request = self.createHTTPrequest(method,
+                                             new_url,
+                                             new_body,
+                                             new_headers)
             try:
                 response = http_client.fetch(request)
             except HTTPError as e:
@@ -259,14 +283,22 @@ class WafBypasser:
             for struct in detection_struct:
                 if struct[1](response, struct[2]):
                     http_client.close()
-                    return self.binary_search(minv, size, url, method, detection_struct, ch, headers, body)
+                    return self.binary_search(minv,
+                                              size,
+                                              url,
+                                              method,
+                                              detection_struct,
+                                              ch,
+                                              headers,
+                                              body)
             minv = size
             size = size * 2
 
     def mid_value(self, minv, maxv):
         return int((minv + maxv) / 2)
 
-    def binary_search(self, minv, maxv, url, method, detection_struct, ch, headers, body=None):
+    def binary_search(self, minv, maxv, url, method, detection_struct, ch,
+                      headers, body=None):
         mid = self.mid_value(minv, maxv)
         new_url = url
         new_body = body
@@ -286,7 +318,10 @@ class WafBypasser:
             raw_val = str(headers)
             raw_val = raw_val.replace(self.lsig, payload)
             new_headers = ast.literal_eval(str(raw_val))
-        request = self.createHTTPrequest(method, new_url, new_body, new_headers)
+        request = self.createHTTPrequest(method,
+                                         new_url,
+                                         new_body,
+                                         new_headers)
         try:
             response = http_client.fetch(request)
         except HTTPError as e:
@@ -295,10 +330,25 @@ class WafBypasser:
         for struct in detection_struct:
             if struct[1](response, struct[2]):
                 http_client.close()
-                return self.binary_search(minv, mid - 1, url, method, detection_struct, ch, headers, body)
+                return self.binary_search(minv,
+                                          mid - 1,
+                                          url,
+                                          method,
+                                          detection_struct,
+                                          ch,
+                                          headers,
+                                          body)
         http_client.close()
 
-        return self.binary_search(mid + 1, maxv, url, method, detection_struct, ch, headers, body)
+        return self.binary_search(mid + 1,
+                                  maxv,
+                                  url,
+                                  method,
+                                  detection_struct,
+                                  ch,
+                                  headers,
+                                  body)
+
     # ##########################################
 
     # HPP Functions
@@ -311,7 +361,8 @@ class WafBypasser:
     #   number of tokens (optional)
     #  --hpp url,body,cookie param_name asp(optional)
     #
-    def asp_hpp(self, methods, payloads, param_name, source, url, headers, body=None):
+    def asp_hpp(self, methods, payloads, param_name, source, url,
+                headers, body=None):
         requests = []
         if "URL" in source.upper():
             for payload in payloads:
@@ -336,9 +387,7 @@ class WafBypasser:
                             url,
                             new_body,
                             headers,
-                            payload
-                    )
-                )
+                            payload))
         elif "COOKIE" in source.upper():
             for payload in payloads:
                 new_headers = self.asp_cookie_hpp(headers, param_name, payload)
@@ -349,9 +398,7 @@ class WafBypasser:
                             url,
                             body,
                             new_headers,
-                            payload
-                    )
-                )
+                            payload))
         return requests
 
     def asp_url_hpp(self, url, param_name, payload):
@@ -388,8 +435,8 @@ class WafBypasser:
         new_headers.add("Cookie", cookie_value)
         return new_headers
 
-    ###########################################
-    def load_payload_file(self, payload_path, valid_size=100000, exclude_chars=[]):
+    def load_payload_file(self, payload_path, valid_size=100000,
+                          exclude_chars=[]):
         """This Function loads a list with payloads"""
         payloads = []
         try:
@@ -408,33 +455,55 @@ class WafBypasser:
         print '\t' + str(len(payloads)) + ' payload(s) found.'
         return payloads
 
-    def payload_from_request(self, request):
-        return self.request_payload[str(id(request))]
-
     def log(self, detection_method, response):  # Not implemented yet
         print "*****************************************"
         print "Something Interesting Found"
-        print "Detected with :" + detection_method
+        print "Detected with: " + detection_method
         print " --------------------------- "
         print "URL: " + response.request.url
         print "Method: " + response.request.method
         if response.request.body is not None:
             print "Post Data: " + response.request.body
         print "Request Headers: "
-        print "Payload: " + self.payload_from_request(response.request)
+        print "Payload: " + \
+              self.requests_table[id(response.request)]["payload"]
         print response.request.headers
         print "*****************************************"
         print
-        self.detections += 1
 
-    #################Detection-Methods####################
-    #Each detection method takes as input an HTTP request and a list with extra args
+    def summarize(self):
+        detected_payloads = []
+        undetected_payloads = []
+        for req_id in self.requests_table:
+            if self.requests_table[req_id]["detected"]:
+                detected_payloads.append(
+                    self.requests_table[req_id]["payload"])
+            else:
+                undetected_payloads.append(
+                    self.requests_table[req_id]["payload"])
+        print
+        print "********************************"
+        print "Number of Detected Payloads: " + str(len(detected_payloads))
+        print "Number of Undetected Payloads: " + str(len(undetected_payloads))
+        print "********************************"
+        print "List of Detected Payloads"
 
-    #contains arguments
-    #args[0] --> string to search for
-    #args[1:] --> rev stands for reverse & cs stands for case sensitive
+        for payload in sorted(detected_payloads):
+            print payload
+        print
+        print "********************************"
+        print "List of Undetected Payloads"
+        for payload in sorted(undetected_payloads):
+            print payload
+
+    # ****************Detection-Methods*********************
+    # Each detection method takes as input an HTTP request and a list
+    # with extra args
+    # contains arguments
+    # args[0] --> string to search for
+    # args[1:] --> rev stands for reverse & cs stands for case sensitive
     def contains(self, response, args):
-        """This function detected if the body of an http responce contains a
+        """This function detected if the body of an http response contains a
         specific string"""
         phrase = args[0]
         case_sensitive = False
@@ -471,7 +540,7 @@ class WafBypasser:
         return False
 
     # Args
-    #Ex 200-300,402,404
+    # Ex 200-300,402,404
     def resp_code_detection(self, response, args):
         code_range = []
         items = []
@@ -500,13 +569,16 @@ class WafBypasser:
                             dest="METHOD",
                             action='store',
                             nargs="+",
-                            help="Specify Method . (ex -X GET .The option @method@ loads all the HTTPmethods that are\
-                                 in ./payload/HTTPmethods/methods.txt). Custom methods can be defined in this file.")
+                            help="Specify Method . (Ex: -X GET . \
+                            The option @method@ loads all the HTTPmethods that\
+                             are in ./payload/HTTPmethods/methods.txt).\
+                              Custom methods can be defined in this file.")
 
         parser.add_argument("-C", "--cookie",
                             dest="COOKIE",
                             action='store',
-                            help="Insert a cookie value. (ex --cookie 'var=value')")
+                            help="Insert a cookie value. \
+                            (Ex --cookie 'var=value')")
 
         parser.add_argument("-t", "--target",
                             dest="TARGET",
@@ -518,13 +590,15 @@ class WafBypasser:
                             dest="HEADERS",
                             action='store',
                             nargs='*',
-                            help="Additional headers (ex -header 'Name:value' 'Name2:value2')")
+                            help="Additional headers \
+                            (ex -header 'Name:value' 'Name2:value2')")
         parser.add_argument("-L", "--length",
                             dest="LENGTH",
                             action='store',
                             nargs=1,
-                            help="Finds the Length of a content placeholder. " +
-                                 "Parameter is a valid fuzzing character(ex -L 'A')")
+                            help="Finds the Length of a content placeholder. \
+                                 Parameter is a valid fuzzing character\
+                                 (Ex -L 'A')")
 
         parser.add_argument("-p", "--data",
                             dest="DATA",
@@ -535,10 +609,10 @@ class WafBypasser:
                             dest="CONTAINS",
                             action='store',
                             nargs='+',
-                            help="DETECTION METHOD(ex1 -cnt 'signature'  \n)\n" +
-                                 "Optional Arguments:\n" +
-                                 "Case sensitive :\n" +
-                                 "(ex2)-cnt 'signature' cs")
+                            help="DETECTION METHOD(ex1 -cnt 'signature'  \n) \
+                                 Optional Arguments:\n \
+                                  Case sensitive :\n \
+                                 (ex2)-cnt 'signature' cs")
         parser.add_argument("-rcd", "--response_code",
                             dest="RESP_CODE_DET",
                             action='store',
@@ -550,13 +624,13 @@ class WafBypasser:
         parser.add_argument("-r", "--reverse",
                             dest="REVERSE",
                             action='store_true',
-                            help="Reverse the detection method.(Negative detection)")
+                            help="Reverse the detection method.\
+                            (Negative detection)")
 
         parser.add_argument("-pl", "--payloads",
                             dest="PAYLOADS",
                             action='store',
                             nargs='*',
-                            #required=True,
                             help="FILE with payloads')(Ex file1 , file2)")
 
         parser.add_argument("-hpps", "--hpp_source",
@@ -574,20 +648,23 @@ class WafBypasser:
                             dest="HPP_ATTACKING_METHOD",
                             action='store',
                             choices=['asp'],
-                            help="ASP attacking method splits the payload at the ',' character and \
-                                send an http request with multiple instances of the same parameter.")
+                            help="ASP attacking method splits the payload at \
+                            the ',' character and send an http request with \
+                             multiple instances of the same parameter.")
 
         parser.add_argument("-fs", "--fuzzing_signature",
                             dest="FUZZING_SIG",
                             action='store',
-                            help="The default fuzzing signature is @@@. You can change it with a custom signature.")
+                            help="The default fuzzing signature is @@@.\
+                             You can change it with a custom signature.")
 
         parser.add_argument("-das", "--detect_allowed_sources",
                             dest="DETECT_ALLOWED_SOURCES",
                             action='store_true',
-                            help="This functionality detects the the allowed sources for a parameter.\
-                                 (Ex if the web app is handling a parameter in way like $REQUEST[param]).\
-                                  ")
+                            help="This functionality detects the the allowed \
+                             sources for a parameter. (Ex if the web app is \
+                             handling a parameter in way like \
+                             $REQUEST[param]).")
 
         parser.add_argument("-am", "--accepted_method",
                             dest="ACCEPTED_METHOD",
@@ -626,12 +703,14 @@ class WafBypasser:
             for method in methods:
                 if method == "@method@":
                     methods.remove(method)
-                    methods.extend(self.load_payload_file("./payloads/HTTPmethods/methods.txt"))
-                    #removing doubles
+                    methods.extend(
+                        self.load_payload_file(
+                            "./payloads/HTTPmethods/methods.txt"))
+                    # Removing doubles
                     methods = list(set(methods))
                     break
         else:
-            methods=[]
+            methods = []
             if Args.DATA is None:
                 methods.append("GET")  # Autodetect Method
             else:
@@ -666,21 +745,30 @@ class WafBypasser:
                 detection_args.append("cs")
             if Args.REVERSE:
                 detection_args.append("rev")
-            self.detection_struct.append(["contains", self.contains, detection_args])
+            self.detection_struct.append(["contains",
+                                          self.contains,
+                                          detection_args])
 
         if Args.RESP_CODE_DET:
             detection_args = []
             detection_args.append(Args.RESP_CODE_DET[0])
             if Args.REVERSE:
                 detection_args.append("rev")
-            self.detection_struct.append(["Response Code Detection", self.resp_code_detection, detection_args])
-        #####################################
+            self.detection_struct.append(["Response Code Detection",
+                                          self.resp_code_detection,
+                                          detection_args])
 
         if Args.LENGTH:
             print "Scanning mode: Length Detection"
             ch = Args.LENGTH[0][0]
-            length = self.find_length(target, methods[0], self.detection_struct, ch, headers, None)
+            length = self.find_length(target,
+                                      methods[0],
+                                      self.detection_struct,
+                                      ch,
+                                      headers,
+                                      None)
             print "Allowed Length = " + str(length)
+
         elif Args.DETECT_ALLOWED_SOURCES:
             print "Scanning mode: Allowed Sources Detection"
             accepted_method = Args.ACCEPTED_METHOD
@@ -697,7 +785,8 @@ class WafBypasser:
             if param_source is None:
                 self.Error("--param_source is not specified.")
 
-            methods = self.load_payload_file("./payloads/HTTPmethods/methods.txt")
+            methods = self.load_payload_file(
+                "./payloads/HTTPmethods/methods.txt")
             requests = self.detect_accepted_sources(
                 target,
                 data,
@@ -714,7 +803,7 @@ class WafBypasser:
                     payloads += self.load_payload_file(payload)
             else:
                 self.Error("Payloads not Specified")
-            #HPP check
+            # HPP check
             hpp_attacking_method = Args.HPP_ATTACKING_METHOD
             if hpp_attacking_method:
                 print "Scanning mode: HTTP Parameter Pollution Mode"
@@ -727,7 +816,13 @@ class WafBypasser:
                     elif param_name is None:
                         self.Error("--param_name is not specified")
                     else:
-                        requests = self.asp_hpp(methods, payloads, param_name, source, target, headers, data)
+                        requests = self.asp_hpp(methods,
+                                                payloads,
+                                                param_name,
+                                                source,
+                                                target,
+                                                headers,
+                                                data)
 
             else:  # Fuzzing using content placeholders loaded from file
                 print "Scanning mode: Fuzzing Using placeholders"
@@ -740,9 +835,11 @@ class WafBypasser:
         if not Args.LENGTH:
             print "Requests number: " + str(len(requests))
             self.fuzz(requests, self.detection_struct)
+            if Args.PAYLOADS:
+                self.summarize()
 
 
 if __name__ == "__main__":
-    wafbypasser = WafBypasser()
+    wafbypasser = WAFBypasser()
     arguments = wafbypasser.GetArgs()
     wafbypasser.Start(arguments)
