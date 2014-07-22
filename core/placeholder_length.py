@@ -1,7 +1,6 @@
 import ast
 
 from tornado.httpclient import HTTPClient, HTTPError
-
 from core.helper import Error
 
 
@@ -39,7 +38,7 @@ def find_length(http_helper, lsig, url, method, detection_struct, ch, headers,
                 response = e.response
 
         for struct in detection_struct:
-            if struct[1](response, struct[2]):
+            if struct["method"](response, struct["arguments"]):
                 http_client.close()
                 return binary_search(
                     http_helper,
@@ -92,7 +91,7 @@ def binary_search(http_helper, lsig, minv, maxv, url, method, detection_struct,
         response = e.response
 
     for struct in detection_struct:
-        if struct[1](response, struct[2]):
+       if struct["method"](response, struct["arguments"]):
             http_client.close()
             return binary_search(http_helper,
                                  lsig, minv,
