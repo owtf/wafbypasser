@@ -38,7 +38,7 @@ class Fuzzer:
         if self.resp_num == self.req_num:  # if is the last response
             ioloop.IOLoop.instance().stop()
 
-    def serial_fuzz(self, requests, delay=0, follow_cookies=True):
+    def sync_fuzz(self, requests, delay=0, follow_cookies=True):
         self.reset()
         http_client = HTTPClient()
         cookie = None

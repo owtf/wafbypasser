@@ -125,13 +125,22 @@ def get_args():
                             action='store',
                             choices=['URL', 'DATA', 'COOKIE', 'HEADER'],
                             help="Specifies the parameters position.")
-        parser.add_argument("-S", "--synchronous",
-                            dest="SYNCHRONOUS",
+        parser.add_argument("-d", "--delay",
+                            dest="DELAY",
                             action='store',
+                            type=int,
                             help="Changes the Fuzzing method from \
                                  asynchronous to synchronous(slower). This \
-                                 Allows you to follow cookies or specify a \
-                                 delay time in seconds  before sending a \
-                                 request. Parameters: \ndelay\nfollow-cookies.\
-                                 \n EX. -S delay 10 follow-cookies ")
+                                 Allows you to follow cookies and specify a \
+                                 delay time in seconds before sending a \
+                                 request.")
+        parser.add_argument("-fc", "--follow-cookies",
+                            dest="FOLLOW_COOKIES",
+                            action='store_true',
+                            help="Changes the Fuzzing method from \
+                                 asynchronous to synchronous(slower). This \
+                                 Allows you to follow cookies and specify a \
+                                 delay time in seconds before sending a \
+                                 request.")
+
         return parser.parse_args()

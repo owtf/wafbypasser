@@ -14,7 +14,7 @@ class PlaceholderManager:
         self.fsig = self.sig + "fuzzhere" + self.sig  # fuzzing signature
         # template signature regular expression
         self.template_signature_re = self.sig
-        self.template_signature_re +=  + "[^" + self.sig + "]+" + self.sig
+        self.template_signature_re += "[^" + self.sig + "]+" + self.sig
 
     def template_signature(self, string):
         ret = re.search(self.template_signature_re, string)

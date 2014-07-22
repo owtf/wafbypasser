@@ -5,13 +5,14 @@ from tornado.httpclient import HTTPRequest
 from core.hpp_lib import asp_hpp
 from core.placeholder_length import find_length
 from core.detection import *
-from core.argument_parser import GetArgs
+from core.argument_parser import get_args
 from core.fuzzer import Fuzzer
 from core.helper import load_payload_file, Error
 from core.http_helper import HTTPHelper
 from core.param_source_detector import detect_accepted_sources
 from core.response_analyzer import analyze_responses
 from core.placeholder_manager import PlaceholderManager
+
 
 
 class WAFBypasser:
@@ -195,7 +196,15 @@ class WAFBypasser:
         if not Args.LENGTH:
             print "Requests number: " + str(len(requests))
             fuzzer = Fuzzer(self.http_helper)
-            responses = fuzzer.async_fuzz(requests)
+            delay = Args.DELAY
+            follow_cookies = Args.FOLLOW_COOKIES
+            if follow_cookies or delay:
+                print "Asynchronous Fuzzing: Started"
+                responses = fuzzer.sync_fuzz(requests ,delay, follow_cookies)
+            else:
+                print "Synchronous Fuzzing: Started"
+                responses = fuzzer.async_fuzz(requests)
+            print "Fuzzing: Completed"
             analyze_responses(responses,
                               self.http_helper,
                               self.detection_struct)
@@ -203,5 +212,5 @@ class WAFBypasser:
 
 if __name__ == "__main__":
     wafbypasser = WAFBypasser()
-    arguments = GetArgs()
+    arguments = get_args()
     wafbypasser.start(arguments)
