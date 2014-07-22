@@ -1,6 +1,7 @@
 import argparse
 
-def GetArgs():
+
+def get_args():
         parser = argparse.ArgumentParser(description='OWTF WAF-BYPASER MODULE')
 
         parser.add_argument("-X", "--request",
@@ -124,4 +125,13 @@ def GetArgs():
                             action='store',
                             choices=['URL', 'DATA', 'COOKIE', 'HEADER'],
                             help="Specifies the parameters position.")
+        parser.add_argument("-S", "--synchronous",
+                            dest="SYNCHRONOUS",
+                            action='store',
+                            help="Changes the Fuzzing method from \
+                                 asynchronous to synchronous(slower). This \
+                                 Allows you to follow cookies or specify a \
+                                 delay time in seconds  before sending a \
+                                 request. Parameters: \ndelay\nfollow-cookies.\
+                                 \n EX. -S delay 10 follow-cookies ")
         return parser.parse_args()

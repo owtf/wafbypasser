@@ -42,7 +42,8 @@ class XMLAnalyzer(object):
         arglist = []
 
         if tag not in[key for key in self.linking_table]:
-            print "Parser Warning: Unknown ending tag found (" + tag + "). Ignoring..."
+            print "Parser Warning: Unknown ending tag found (" + tag + \
+                  "). Ignoring..."
             return
 
         while True:
@@ -85,7 +86,9 @@ class TemplateParser(object):
         self.payload_data = None
         self.linking_table = obfuscation_lib.get_transformations()
         self.linking_table.update({"payload": self.payload})
-        self.linking_table.update({"transform_payload": self.transform_payload})
+        self.linking_table.update(
+            {"transform_payload":
+            self.transform_payload})
 
     def transform_payload(self, string):
         """Return the output.

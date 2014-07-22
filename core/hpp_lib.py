@@ -1,5 +1,6 @@
 import urlparse
 
+
 # ##########################################  # ASP HPP Functions
 #
 # www.example.com?index.asp?<asp_hpp/ param_name=email >
@@ -9,9 +10,9 @@ import urlparse
 #   tokens
 #   number of tokens (optional)
 #  --hpp url,body,cookie param_name asp(optional)
-#
 
-def asp_hpp(wafbypasser, methods, payloads, param_name, source, url, headers, body=None):
+def asp_hpp(wafbypasser, methods, payloads, param_name, source, url,
+            headers, body=None):
     requests = []
     if "URL" in source.upper():
         for payload in payloads:

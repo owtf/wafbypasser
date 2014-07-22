@@ -1,7 +1,8 @@
 from core.http_helper import HTTPHelper
 
-def detect_accepted_sources(http_helper, url, data, headers, param_name, param_source,
-                            param_value, methods, valid_method):
+
+def detect_accepted_sources(http_helper, url, data, headers, param_name,
+                            param_source, param_value, methods, valid_method):
     requests = []
     sources = ['URL', 'DATA', 'COOKIE', 'HEADER']
     for method in methods:
@@ -11,19 +12,21 @@ def detect_accepted_sources(http_helper, url, data, headers, param_name, param_s
             new_headers = headers.copy()
 
             if source is "URL":
-                new_url = HTTPHelper.add_url_param(url, param_name, param_value)
+                new_url = HTTPHelper.add_url_param(url,
+                                                   param_name,
+                                                   param_value)
             elif source is "DATA":
                 new_data = HTTPHelper.add_body_param(data,
-                                               param_name,
-                                               param_value)
+                                                     param_name,
+                                                     param_value)
             elif source is "COOKIE":
                 new_headers = HTTPHelper.add_cookie_param(new_headers,
-                                                    param_name,
-                                                    param_value)
+                                                          param_name,
+                                                          param_value)
             elif source is "HEADER":
                 new_headers = HTTPHelper.add_cookie_param(new_headers,
-                                                    param_name,
-                                                    param_value)
+                                                          param_name,
+                                                          param_value)
 
             request = http_helper.create_http_request(
                 method,

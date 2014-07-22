@@ -8,14 +8,13 @@ from core.template_parser import TemplateParser
 
 
 class PlaceholderManager:
-
     def __init__(self, fuzzing_signature):
         self.sig = fuzzing_signature
         self.lsig = self.sig + "length" + self.sig  # Length Signature
         self.fsig = self.sig + "fuzzhere" + self.sig  # fuzzing signature
         # template signature regular expression
-        self.template_signature_re = self.sig+ "[^" +\
-                                     self.sig + "]+" + self.sig
+        self.template_signature_re = self.sig
+        self.template_signature_re +=  + "[^" + self.sig + "]+" + self.sig
 
     def template_signature(self, string):
         ret = re.search(self.template_signature_re, string)
@@ -76,8 +75,9 @@ class PlaceholderManager:
             return body.replace(template_sig, new_payload)
         return body
 
-    def transformed_http_requests(self, http_helper, methods, url, payloads, headers=None,
-                                  body=None,):
+    def transformed_http_requests(self, http_helper, methods, url, payloads,
+                                  headers=None,
+                                  body=None, ):
         """This constructs a list of HTTP transformed requests which contain
         the payloads"""
         requests = []
@@ -87,9 +87,9 @@ class PlaceholderManager:
                 new_headers = self.replace_header(headers, payload)
                 new_body = self.replace_body(body, payload)
                 request = http_helper.create_http_request(method,
-                                                 new_url,
-                                                 new_body,
-                                                 new_headers,
-                                                 payload)
+                                                          new_url,
+                                                          new_body,
+                                                          new_headers,
+                                                          payload)
                 requests.append(request)
         return requests
