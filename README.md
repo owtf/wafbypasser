@@ -40,7 +40,7 @@ python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=@@@fuzzhere@@@' -pl paylo
 + Finding for the fuzzing placeholder allowed length
 
 ```sh-session
-python fuzzer.py -t http://demo.testfire.net?var=@@@length@@@ -cnt "long" -L A
+python wafbypasser.py -t http://demo.testfire.net?var=@@@length@@@ -cnt "long" -L A
 ```
 
 Example run. The A is a white-listed character.

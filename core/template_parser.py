@@ -1,5 +1,6 @@
 from lxml import etree
-import obfuscation_lib
+
+from core import obfuscation_lib
 
 
 class XMLAnalyzer(object):
@@ -23,7 +24,7 @@ class XMLAnalyzer(object):
         self.stack = []
         self.encoded_string = ""
         self.linking_table = linking_table
-        print "Parser Info: Parsing Started"
+        #print "Parser Info: Parsing Started"
 
     def start(self, tag, attrib):
         try:
@@ -73,7 +74,7 @@ class XMLAnalyzer(object):
         print("Parser Info: Comment Found: (%s). Ignoring ..." % text)
 
     def close(self):
-        print("Parser Info: Parsing Complete")
+        #print("Parser Info: Parsing Complete")
         return self.stack.pop()[1]
 
 
