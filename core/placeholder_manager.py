@@ -3,7 +3,7 @@ import urllib
 import ast
 
 from tornado.httputil import HTTPHeaders
-
+from core.http_helper import HTTPHelper
 from core.template_parser import TemplateParser
 
 
@@ -16,11 +16,13 @@ class PlaceholderManager:
         self.template_signature_re = self.sig
         self.template_signature_re += "[^" + self.sig + "]+" + self.sig
 
+
     def template_signature(self, string):
         ret = re.search(self.template_signature_re, string)
         if ret:
             return ret.group(0)
         return False
+
 
     @staticmethod
     def get_placeholder_number(template_signature_re, string):
@@ -28,6 +30,7 @@ class PlaceholderManager:
         if ret:
             return len(ret.findall(string))
         return 0
+
 
     def replace_url(self, url, payload):
         if self.fsig in url:
@@ -41,6 +44,7 @@ class PlaceholderManager:
                              self.sig))[1:-1]  # removing extra " "
             return url.replace(template_sig, new_payload)
         return url
+
 
     def replace_header(self, headers, payload):
         raw_headers = str(headers)
@@ -60,6 +64,7 @@ class PlaceholderManager:
             return new_headers
         return headers
 
+
     def replace_body(self, body, payload):
         if body is None:
             return body
@@ -75,21 +80,38 @@ class PlaceholderManager:
             return body.replace(template_sig, new_payload)
         return body
 
+
     def transformed_http_requests(self, http_helper, methods, url, payloads,
-                                  headers=None,
-                                  body=None, ):
+                                  headers=None, body=None, content_types=None):
         """This constructs a list of HTTP transformed requests which contain
         the payloads"""
         requests = []
-        for method in methods:
-            for payload in payloads:
-                new_url = self.replace_url(url, payload)
-                new_headers = self.replace_header(headers, payload)
-                new_body = self.replace_body(body, payload)
-                request = http_helper.create_http_request(method,
-                                                          new_url,
-                                                          new_body,
-                                                          new_headers,
-                                                          payload)
-                requests.append(request)
+        if content_types:
+            for content_type in content_types:
+                headers = HTTPHelper.add_header_param(headers, "Content-Type",
+                                            content_type)
+                for method in methods:
+                    for payload in payloads:
+                        new_url = self.replace_url(url, payload)
+                        new_headers = self.replace_header(headers, payload)
+                        new_body = self.replace_body(body, payload)
+                        request = http_helper.create_http_request(method,
+                                                                  new_url,
+                                                                  new_body,
+                                                                  new_headers,
+                                                                  payload)
+                        requests.append(request)
+        else:
+            for method in methods:
+                for payload in payloads:
+                    new_url = self.replace_url(url, payload)
+                    new_headers = self.replace_header(headers, payload)
+                    new_body = self.replace_body(body, payload)
+                    request = http_helper.create_http_request(method,
+                                                              new_url,
+                                                              new_body,
+                                                              new_headers,
+                                                              payload)
+
+                    requests.append(request)
         return requests

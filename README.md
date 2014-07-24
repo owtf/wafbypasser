@@ -74,3 +74,10 @@ The transformation functions are defined in the obfuscation_lib.py.
 ```sh-session
 python wafbypasser.py -t 'http://127.0.0.1/xss.php?' -pl xss2.txt -rcd '200-599,100' --data "xss=@@@<reverse><payload/></reverse>@@@"
 ```
+
+
++ Testing for anomalies by and bypasses changing the Content-Type. 
+
+```sh-session
+./wafbypasser.py -t "http://localhost/xss.php?xss=" -ct -pl xss.txt -cnt 403 -p "xss=@@@fuzzhere@@@"
+```

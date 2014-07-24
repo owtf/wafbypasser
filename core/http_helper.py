@@ -21,8 +21,13 @@ class HTTPHelper:
         request.url = url
         if body:
             request.body = body
-        if headers:
             request.headers = headers
+            if headers and not "Content-Length" in request.headers:
+                #request.headers["Content-Length"] = len(body)
+                pass
+            if method.upper() not in "POST":
+                headers.pop("Content-Length")
+
         request.start_time = time()
         if payload:
             self.payload_table[id(request)] = payload
@@ -68,6 +73,7 @@ class HTTPHelper:
     @staticmethod
     def add_header_param(headers, param_name, param_value):
         new_headers = headers.copy()
-        new_headers.pop(param_name)
+        if param_name in new_headers:
+            new_headers.pop(param_name)
         new_headers.add(param_name, param_value)
         return new_headers

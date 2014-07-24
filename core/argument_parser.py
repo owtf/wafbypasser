@@ -142,5 +142,10 @@ def get_args():
                                  Allows you to follow cookies and specify a \
                                  delay time in seconds before sending a \
                                  request.")
+        parser.add_argument("-ct", "--content-type",
+                            dest="CONTENT_TYPE",
+                            action='store_true',
+                            help="This will fuzz the Content-Type with a/"
+                                 " list of content types.")
 
         return parser.parse_args()

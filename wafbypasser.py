@@ -31,7 +31,8 @@ class WAFBypasser:
                                         proxy_port=None,
                                         proxy_username=None,
                                         proxy_password=None,
-                                        user_agent=self.ua)
+                                        user_agent=self.ua,
+                                        request_timeout=30.0)
         # ####
         self.sig = "@@@"
         self.lsig = self.sig + "length" + self.sig  # Length Signature
@@ -143,8 +144,7 @@ class WAFBypasser:
             if param_source is None:
                 Error("--param_source is not specified.")
 
-            methods = load_payload_file(
-                "./payloads/HTTPmethods/methods.txt")
+            methods = load_payload_file("./payloads/HTTP/methods.txt")
             requests = detect_accepted_sources(self.http_helper,
                                                target,
                                                data,
@@ -186,23 +186,30 @@ class WAFBypasser:
             else:  # Fuzzing using content placeholders loaded from file
                 print "Scanning mode: Fuzzing Using placeholders"
                 pm = PlaceholderManager(self.sig)
+                if Args.CONTENT_TYPE:
+                    content_type_list = load_payload_file(
+                        "./payloads/HTTP/content_types.txt")
+                else:
+                    content_type_list = None
                 requests = pm.transformed_http_requests(
                     self.http_helper,
                     methods,
                     target,
                     payloads,
                     headers,
-                    data)
+                    data,
+                    content_type_list)
+
         if not Args.LENGTH:
             print "Requests number: " + str(len(requests))
             fuzzer = Fuzzer(self.http_helper)
             delay = Args.DELAY
             follow_cookies = Args.FOLLOW_COOKIES
             if follow_cookies or delay:
-                print "Asynchronous Fuzzing: Started"
+                print "Synchronous Fuzzing: Started"
                 responses = fuzzer.sync_fuzz(requests ,delay, follow_cookies)
             else:
-                print "Synchronous Fuzzing: Started"
+                print "ASynchronous Fuzzing: Started"
                 responses = fuzzer.async_fuzz(requests)
             print "Fuzzing: Completed"
             analyze_responses(responses,
