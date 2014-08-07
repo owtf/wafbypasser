@@ -1,17 +1,18 @@
 import urlparse
-
+from http_helper import HTTPHelper
 
 # ##########################################  # ASP HPP Functions
 #
 # www.example.com?index.asp?<asp_hpp/ param_name=email >
 # variable name
-#   header, body or url
+# header, body or url
 #   type of hpp
 #   tokens
 #   number of tokens (optional)
 #  --hpp url,body,cookie param_name asp(optional)
 
-def asp_hpp(wafbypasser, methods, payloads, param_name, source, url,
+
+def asp_hpp(http_helper, methods, payloads, param_name, source, url,
             headers, body=None):
     requests = []
     if "URL" in source.upper():
@@ -19,7 +20,7 @@ def asp_hpp(wafbypasser, methods, payloads, param_name, source, url,
             new_url = asp_url_hpp(url, param_name, payload)
             for method in methods:
                 requests.append(
-                    wafbypasser.createHTTPrequest(
+                    http_helper.createHTTPrequest(
                         method,
                         new_url,
                         body,
@@ -32,7 +33,7 @@ def asp_hpp(wafbypasser, methods, payloads, param_name, source, url,
             new_body = asp_post_hpp(body, param_name, payload)
             for method in methods:
                 requests.append(
-                    wafbypasser.createHTTPrequest(
+                    http_helper.createHTTPrequest(
                         method,
                         url,
                         new_body,
@@ -43,7 +44,7 @@ def asp_hpp(wafbypasser, methods, payloads, param_name, source, url,
             new_headers = asp_cookie_hpp(headers, param_name, payload)
             for method in methods:
                 requests.append(
-                    wafbypasser.createHTTPrequest(
+                    http_helper.createHTTPrequest(
                         method,
                         url,
                         body,
@@ -87,3 +88,90 @@ def asp_cookie_hpp(headers, param_name, payload):
         sep = '&'
     new_headers.add("Cookie", cookie_value)
     return new_headers
+
+
+def param_overwrite(http_helper, param, accepted_source, payload, url, body,
+                    headers):
+    requests = []
+    if "GET" is accepted_source:
+        new_url = HTTPHelper.add_url_param(url, param, "")
+        new_body = HTTPHelper.add_body_param(body, param, payload)
+        new_headers = HTTPHelper.add_cookie_param(headers, param, payload)
+
+        requests.append(http_helper.createHTTPrequest(
+                        accepted_source,
+                        new_url,
+                        new_body,
+                        headers,
+                        payload))
+
+        requests.append(http_helper.createHTTPrequest(
+                        accepted_source,
+                        new_url,
+                        body,
+                        new_headers,
+                        payload))
+        #Duplicate param , first is empty and the second contains the payload
+        new_url = HTTPHelper.add_url_param(new_url, param, payload)
+        requests.append(http_helper.createHTTPrequest(
+                        accepted_source,
+                        new_url,
+                        body,
+                        headers,
+                        payload))
+        return requests
+    if "POST" is accepted_source:
+        new_url = HTTPHelper.add_url_param(url, param, payload)
+        new_body = HTTPHelper.add_body_param(body, param, "")
+        new_headers = HTTPHelper.add_cookie_param(headers, param, payload)
+        #Overwrite body with cookie
+        requests.append(http_helper.createHTTPrequest(
+                        accepted_source,
+                        url,
+                        new_body,
+                        new_headers,
+                        payload))
+        #Overwrite body with url
+        requests.append(http_helper.createHTTPrequest(
+                        accepted_source,
+                        new_url,
+                        body,
+                        headers,
+                        payload))
+        #Duplicate param , first is empty and the second contains the payload
+        new_body = HTTPHelper.add_url_param(new_body, param, payload)
+        requests.append(http_helper.createHTTPrequest(
+                        accepted_source,
+                        url,
+                        new_body,
+                        headers,
+                        payload))
+        return requests
+
+    if "COOKIE" is accepted_source:
+        new_url = HTTPHelper.add_url_param(url, param, payload)
+        new_body = HTTPHelper.add_body_param(body, param, payload)
+        new_headers = HTTPHelper.add_cookie_param(headers, param, "")
+
+        requests.append(http_helper.createHTTPrequest(
+                        accepted_source,
+                        new_url,
+                        body,
+                        new_headers,
+                        payload))
+
+        requests.append(http_helper.createHTTPrequest(
+                        accepted_source,
+                        url,
+                        new_body,
+                        headers,
+                        payload))
+        #Duplicate param , first is empty and the second contains the payload
+        new_headers = HTTPHelper.add_cookie_param(new_headers, param, payload)
+        requests.append(http_helper.createHTTPrequest(
+                        accepted_source,
+                        url,
+                        body,
+                        new_headers,
+                        payload))
+        return requests

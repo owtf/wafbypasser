@@ -4,12 +4,12 @@ import argparse
 def get_args():
         parser = argparse.ArgumentParser(description='OWTF WAF-BYPASER MODULE')
 
-        parser.add_argument("-X", "--request",
-                            dest="METHOD",
+        parser.add_argument("-X", "--method",
+                            dest="METHODS",
                             action='store',
                             nargs="+",
                             help="Specify Method . (Ex: -X GET . \
-                            The option @method@ loads all the HTTPmethods that\
+                            The option @@@all@@@ loads all the HTTPmethods that\
                              are in ./payload/HTTPmethods/methods.txt).\
                               Custom methods can be defined in this file.")
 
@@ -31,6 +31,7 @@ def get_args():
                             nargs='*',
                             help="Additional headers \
                             (ex -header 'Name:value' 'Name2:value2')")
+
         parser.add_argument("-L", "--length",
                             dest="LENGTH",
                             action='store',
@@ -39,7 +40,7 @@ def get_args():
                                  Parameter is a valid fuzzing character\
                                  (Ex -L 'A')")
 
-        parser.add_argument("-p", "--data",
+        parser.add_argument("-d", "--data",
                             dest="DATA",
                             action='store',
                             help="POST data (ex --data 'var=value')")
@@ -52,6 +53,7 @@ def get_args():
                                  Optional Arguments:\n \
                                   Case sensitive :\n \
                                  (ex2)-cnt 'signature' cs")
+
         parser.add_argument("-rcd", "--response_code",
                             dest="RESP_CODE_DET",
                             action='store',
@@ -72,21 +74,21 @@ def get_args():
                             nargs='*',
                             help="FILE with payloads')(Ex file1 , file2)")
 
-        parser.add_argument("-hpps", "--hpp_source",
-                            dest="HPP_SOURCE",
-                            action='store',
-                            choices=['url', 'data', 'cookie'],
-                            help="Options: URL, DATA or COOKIE")
+        #parser.add_argument("-hpps", "--hpp_source",
+        #                    dest="HPP_SOURCE",
+        #                    action='store',
+        #                    choices=['url', 'data', 'cookie'],
+        #                    help="Options: URL, DATA or COOKIE")
 
-        parser.add_argument("-hppp", "--hpp_param_name",
-                            dest="HPP_PARAM_NAME",
-                            action='store',
-                            help="HPP parameter name")
+        #parser.add_argument("-hppp", "--hpp_param_name",
+        #                    dest="HPP_PARAM_NAME",
+        #                    action='store',
+        #                    help="HPP parameter name")
 
-        parser.add_argument("-hppa", "--hpp_attack_method",
-                            dest="HPP_ATTACKING_METHOD",
+        parser.add_argument("-hpp", "--hpp_attack_method",
+                            dest="HPP",
                             action='store',
-                            choices=['asp'],
+                            choices=['asp', "parameter_overwriting"],
                             help="ASP attacking method splits the payload at \
                             the ',' character and send an http request with \
                              multiple instances of the same parameter.")
@@ -105,27 +107,32 @@ def get_args():
                              handling a parameter in way like \
                              $REQUEST[param]).")
 
-        parser.add_argument("-am", "--accepted_method",
-                            dest="ACCEPTED_METHOD",
-                            action='store',
-                            help="The accepted Method")
+        #parser.add_argument("-am", "--accepted_method",
+        #                    dest="ACCEPTED_METHOD",
+        #                    action='store',
+        #                    help="The accepted Method")
 
-        parser.add_argument("-apv", "--accepted_param_value",
-                            dest="ACCEPTED_PARAM_VALUE",
+        #parser.add_argument("-apv", "--accepted_param_value",
+        #                    dest="ACCEPTED_PARAM_VALUE",
+        #                    action='store',
+        #                    help="Accepted parameter value")
+
+        parser.add_argument("-apv", "--accepted_value",
+                            dest="ACCEPTED_VALUE",
                             action='store',
                             help="Accepted parameter value")
 
         parser.add_argument("-pn", "--param_name",
                             dest="PARAM_NAME",
                             action='store',
-                            help="Testing parameter name")
+                            help="Specify parameter name")
 
         parser.add_argument("-ps", "--param_source",
                             dest="PARAM_SOURCE",
                             action='store',
                             choices=['URL', 'DATA', 'COOKIE', 'HEADER'],
                             help="Specifies the parameters position.")
-        parser.add_argument("-d", "--delay",
+        parser.add_argument("-dl", "--delay",
                             dest="DELAY",
                             action='store',
                             type=int,
@@ -147,5 +154,47 @@ def get_args():
                             action='store_true',
                             help="This will fuzz the Content-Type with a/"
                                  " list of content types.")
+        parser.add_argument("-f", "--fuzz",
+                            dest="FUZZ",
+                            action='store_true',
+                            help="Start the fuzzing mode.")
 
-        return parser.parse_args()
+        parser.add_argument("-dac", "--detect_allowed_chars",
+                            dest="DETECT_ALLOWED_CHARS",
+                            action='store_true',
+                            help="Start the fuzzing mode.")
+
+        #parser.add_argument("-po", "--param-overwriting",
+        #                    dest="PARAM_OVERWRITING",
+        #                    action='store_true',
+        #                    help="This will use HPP to test if a parameter \ "
+        #                         "can be over-writen")
+
+        args = parser.parse_args()
+        return {"target": args.TARGET,
+                "payloads": args.PAYLOADS,
+                "headers": args.HEADERS,
+                "methods": args.METHODS,
+                "data": args.DATA,
+                "length": args.LENGTH,
+                "contains": args.CONTAINS,
+                "resp_code_det": args.RESP_CODE_DET,
+                "reverse": args.REVERSE,
+                "hpp": args.HPP,
+                "fuzzing_signature": args.FUZZING_SIG,
+                "detect_allowed_sources": args.DETECT_ALLOWED_SOURCES,
+                "accepted_value": args.ACCEPTED_VALUE,
+                "param_name": args.PARAM_NAME,
+                "param_source": args.PARAM_SOURCE,
+                "delay": args.DELAY,
+                "follow_cookies": args.FOLLOW_COOKIES,
+                "content_type": args.CONTENT_TYPE,
+                "cookie": args.COOKIE,
+                "fuzz": args.FUZZ,
+                "detect_allowed_chars": args.DETECT_ALLOWED_CHARS
+                #"param_overwriting": args.PARAM_OVERWRITING
+         }
+
+
+
+

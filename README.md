@@ -10,31 +10,31 @@ This example is fuzzing url using a payload list loaded from file, some post
 data, a header and a cookie
 
 ```sh-session
-python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=@@@fuzzhere@@@' -pl payloadlist.txt -rcd '200-599,100'  -H "var:1234" -p "var=1234" --cookie "name=tester"
+python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=@@@fuzzhere@@@' -pl payloadlist.txt -rcd '200-599,100'  -H "var:1234" -d "var=1234" --cookie "name=tester"
 ```
 
 Same example as above but fuzzing headers
 
 ```sh-session
-python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=1' -pl xss.txt -rcd '200-599,100'  -H "header2:10" "var:@@@fuzzhere@@@" -p "var=1234" --cookie "name=tester"
+python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=1' -pl xss.txt -rcd '200-599,100'  -H "header2:10" "var:@@@fuzzhere@@@" -d "var=1234" --cookie "name=tester"
 ```
 
 + Reverse the ResponceCodeDetection  function (Negative testing).
 
 ```sh-session
-python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=1' -pl xss.txt -rcd '200-599,100'  -H "header2:10" "var:@@@fuzzhere@@@" -p "var=1234" --cookie "name=tester" -r
+python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=1' -pl xss.txt -rcd '200-599,100'  -H "header2:10" "var:@@@fuzzhere@@@" -d "var=1234" --cookie "name=tester" -r
 ```
 
 + Testing usings CoNTains detection function text
 
 ```sh-session
-python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=@@@fuzzhere@@@' -pl payloadlist.txt --contains 'error' -H "var:1234" -p "var=1234" --cookie "name=tester"
+python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=@@@fuzzhere@@@' -pl payloadlist.txt --contains 'error' -H "var:1234" -d "var=1234" --cookie "name=tester"
 ```
 
 + Testing usings CoNTains case_senvitice text
 
 ```sh-session
-python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=@@@fuzzhere@@@' -pl payloadlist.txt --contains 'ErrOr' cs -H "var:1234" -p "var=1234" --cookie "name=tester"
+python wafbypasser.py -t 'http://127.0.0.1/xss.php?xss=@@@fuzzhere@@@' -pl payloadlist.txt --contains 'ErrOr' cs -H "var:1234" -d "var=1234" --cookie "name=tester"
 ```
 
 + Finding for the fuzzing placeholder allowed length
@@ -79,5 +79,6 @@ python wafbypasser.py -t 'http://127.0.0.1/xss.php?' -pl xss2.txt -rcd '200-599,
 + Testing for anomalies by and bypasses changing the Content-Type. 
 
 ```sh-session
-./wafbypasser.py -t "http://localhost/xss.php?xss=" -ct -pl xss.txt -cnt 403 -p "xss=@@@fuzzhere@@@"
+python wafbypasser.py -t http://127.0.0.1/xss.php?xss=test -ct
+e@@@"
 ```
