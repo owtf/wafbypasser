@@ -1,7 +1,6 @@
 #!/bin/python
 from tornado.httputil import HTTPHeaders
 from tornado.httpclient import HTTPRequest
-
 from core.hpp_lib import asp_hpp, param_overwrite
 from core.placeholder_length import find_length
 from core.detection import *
@@ -40,7 +39,7 @@ class WAFBypasser:
     def require(self, args, params):
         param_missing = False
         for param in params:
-            if param is None:
+            if args[param] is None:
                 param_missing = True
                 print "Specify: --" + param
         if param_missing:
@@ -77,6 +76,7 @@ class WAFBypasser:
         #self.http_helper = HTTPHelper(self.init_request)
         #self.fuzzer = Fuzzer(self.http_helper)
         #self.args =  FIXME
+        self.payload_path = {"asp": "./payloads/HPP/asp.txt",}
 
 
     def init_methods(self, args):
@@ -219,40 +219,42 @@ class WAFBypasser:
         elif args["hpp"]:
             self.require(args, ["param_name", "param_source"])
             param_name = args["param_name"]
-            accepted_source = args["param_source"]
+            param_source = args["param_source"]
             self.is_detection_set(args)
 
             if args["hpp"] == "asp":
 
-                if args["payload"]:
-                    payloads = load_payload_file(args["payload"])
+                if args["payloads"]:
+                    payloads = load_payload_file(args["payloads"][0])
                 else:
-                    load_payload_file("")  # FixMe add payloads from collection
+                    load_payload_file(self.payload_path["asp"])
 
                 print "Scanning mode: ASP HPP Parameter Splitting"
                 requests = asp_hpp(self.http_helper,
                                    methods,
                                    payloads,
                                    param_name,
-                                   accepted_source,
+                                   param_source,
                                    target,
                                    headers,
                                    data)
                 responses = self.fuzz(args, requests)
-                #fixme analyze the requests
+
             elif args["hpp"] == "parameter_overwriting":
-                # FIXME Insert payload from stdin
-                self.require(args, "payload")
-                payloads = load_payload_file(args["payload"])
+                self.require(args, ["payloads"])
+                payloads = load_payload_file(args["payloads"][0])
                 requests = param_overwrite(self.http_helper,
                                            param_name,
-                                           accepted_source,
+                                           param_source,
                                            payloads[0],
                                            target,
                                            data,
                                            headers)
                 responses = self.fuzz(args, requests)
-                #fixme
+            analyze_responses(responses,
+                              self.http_helper,
+                              self.detection_struct)
+
         elif args["detect_allowed_chars"]:
             self.is_detection_set(args)
             payloads = []
@@ -384,7 +386,7 @@ class WAFBypasser:
 
             payloads = []
             if args["payloads"]:
-                for payload in args.PAYLOADS:
+                for payload in args["payloads"]:
                     payloads += load_payload_file(payload)
             else:
                 pass

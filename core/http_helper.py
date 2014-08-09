@@ -26,7 +26,8 @@ class HTTPHelper:
                 #request.headers["Content-Length"] = len(body)
                 pass
             if method.upper() not in "POST":
-                headers.pop("Content-Length")
+                if "Content-Length" in headers:
+                    headers.pop("Content-Length")
 
         request.start_time = time()
         if payload:
