@@ -76,7 +76,7 @@ python wafbypasser.py -t 'http://127.0.0.1/xss.php?' -pl xss2.txt -rcd '200-599,
 ```
 
 
-+ Testing for anomalies by and bypasses changing the Content-Type. 
++ Testing for anomalies and bypasses by changing the Content-Type. 
 
 ```sh-session
 python wafbypasser.py -t http://127.0.0.1/xss.php?xss=test -ct

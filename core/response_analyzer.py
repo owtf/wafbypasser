@@ -75,14 +75,6 @@ def format_headers(headers):
         return format_headers
     return formatted_headers[:-2]
 
-
-#this function is detecting if a variable is accessed using $REQUEST["param"]
-def analyze_source_responses(responses, accepted_source):
-
-    for response in responses:
-        pass #FIXME !!!!!
-
-
 def analyze_chars(responses, http_helper, detection_struct):
     problematic_chars = ["\n", "\r", "\t", chr(11), chr(12)]
     det_resp = []
@@ -175,3 +167,30 @@ def analyze_encoded_chars(responses, http_helper, detection_struct):
     print
     return {"detected": det_payloads,
             "undetected": undet_payloads}
+
+
+def analyze_accepted_sources(responses, detection_struct):
+    det_resp = []
+    undet_resp = []
+    for response in responses:
+        detected = False
+        for detection in detection_struct:
+            if detection["method"](response, detection["arguments"]):
+                det_resp.append(response)
+                detected = True
+                break
+        if not detected:
+            undet_resp.append(response)
+
+    print "Sources with matched detection criteria: "
+    print
+    for resp in det_resp:
+        print "[->]Request"
+        print_request(resp)
+        print "[<-]Responce: "
+        print_response(resp)
+        print
+        print
+
+
+

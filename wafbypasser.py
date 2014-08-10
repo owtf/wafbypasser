@@ -8,8 +8,8 @@ from core.argument_parser import get_args
 from core.fuzzer import Fuzzer
 from core.helper import load_payload_file, Error
 from core.http_helper import HTTPHelper
-from core.param_source_detector import detect_accepted_sources
-from core.response_analyzer import analyze_responses, print_request, print_response, analyze_chars, analyze_encoded_chars
+from core.param_source_detector import detect_accepted_sources, create_request
+from core.response_analyzer import analyze_responses, print_request, print_response, analyze_chars, analyze_encoded_chars, analyze_accepted_sources
 from core.placeholder_manager import PlaceholderManager
 from core.obfuscation_lib import unicode_urlencode, urlencode
 import string
@@ -169,7 +169,7 @@ class WAFBypasser:
             print "Placeholder Allowed Length = " + str(length)
         # Detecting Allowed Sources
         elif args["detect_allowed_sources"]:
-            self.require(args, ["method",
+            self.require(args, ["methods",
                                 "param_name",
                                 "accepted_value",
                                 "param_source"])
@@ -182,7 +182,8 @@ class WAFBypasser:
             param_name = args["param_name"]
             accepted_value = args["accepted_value"]
             param_source = args["param_source"]
-            methods = load_payload_file("./payloads/HTTP/methods.txt")
+
+
             requests = detect_accepted_sources(self.http_helper,
                                                target,
                                                data,
@@ -190,10 +191,9 @@ class WAFBypasser:
                                                param_name,
                                                param_source,
                                                accepted_value,
-                                               methods,
                                                accepted_method)
-            # FIXME analyze requests
             responses = self.fuzz(args, requests)
+            analyze_accepted_sources(responses, self.detection_struct)
 
         elif args["content_type"]:
             print "Tampering Content-Type mode"
@@ -288,6 +288,8 @@ class WAFBypasser:
                           self.http_helper,
                           self.detection_struct)
 
+            print
+            print "UnicodeURL encoding bad characters"
             payloads = []
             #unicode_urlencode_badchars
             for bad_char in sent_payloads["detected"]:
@@ -303,24 +305,7 @@ class WAFBypasser:
                           self.http_helper,
                           self.detection_struct)
 
-            payloads = []
-            # add good char infront of bad char
-            for bad_char in sent_payloads["detected"]:
-                payloads.append(bad_char + sent_payloads["undetected"][0])
-            requests = self.pm.transformed_http_requests(self.http_helper,
-                                                     methods,
-                                                     target,
-                                                     payloads,
-                                                     headers,
-                                                     data)
-            responses = self.fuzz(args, requests)
-            analyze_encoded_chars(responses,
-                          self.http_helper,
-                          self.detection_struct)
-
             if sent_payloads["detected"] is not []:
-                print
-                print "Sending a detected char after an undetected"
                 good_char = None
                 for char in string.letters:
                     good_char = char
@@ -331,6 +316,25 @@ class WAFBypasser:
                         break
                 if not good_char:
                     good_char = sent_payloads["undetected"][0]
+
+                print
+                print "Sending a detected char followed by an undetected"
+                payloads = []
+                # add good char infront of bad char
+                for bad_char in sent_payloads["detected"]:
+                    payloads.append(bad_char + good_char)
+                requests = self.pm.transformed_http_requests(self.http_helper,
+                                                     methods,
+                                                     target,
+                                                     payloads,
+                                                     headers,
+                                                     data)
+                responses = self.fuzz(args, requests)
+                analyze_encoded_chars(responses,
+                          self.http_helper,
+                          self.detection_struct)
+                print
+                print "Sending a detected char after an undetected"
                 payloads = []
                 for bad_char in sent_payloads["detected"]:
                     payloads.append(good_char + bad_char)
