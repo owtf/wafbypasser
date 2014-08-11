@@ -1,9 +1,8 @@
 from core.http_helper import HTTPHelper
 
-
+"""
 def create_request(http_helper, url, data, headers, param_name,
-                         param_source, param_value, method):
-    # sources = ['URL', 'DATA', 'COOKIE', 'HEADER']
+                   param_source, param_value, method):
     new_url = url
     new_data = data
     new_headers = headers.copy()
@@ -30,7 +29,7 @@ def create_request(http_helper, url, data, headers, param_name,
         new_data,
         new_headers)
     return request
-
+"""
 
 def detect_accepted_sources(http_helper, url, data, headers, param_name,
                             param_source, param_value, method):

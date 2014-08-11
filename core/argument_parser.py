@@ -9,8 +9,8 @@ def get_args():
                             action='store',
                             nargs="+",
                             help="Specify Method . (Ex: -X GET . \
-                            The option @@@all@@@ loads all the HTTPmethods that\
-                             are in ./payload/HTTPmethods/methods.txt).\
+                            The option @@@all@@@ loads all the HTTP methods \
+                            which are listed in ./payload/HTTP/methods.txt).\
                               Custom methods can be defined in this file.")
 
         parser.add_argument("-C", "--cookie",
@@ -58,9 +58,15 @@ def get_args():
                             dest="RESP_CODE_DET",
                             action='store',
                             nargs=1,
-                            help="DETECTION METHOD(ex1 -rcd 200  \n)\n" +
-                                 "(ex2 -rcd 400,404)+\n(ex3 rcd 200-400)\n)" +
-                                 "(ex4 -rcd 100,200-300)")
+                            help="DETECTION METHOD(Ex1 -rcd 200  \n)\n" \
+                                 "(Ex2 -rcd 400,404)+\n(ex3 rcd 200-400)\n)" \
+                                 "(Ex4 -rcd 100,200-300)")
+
+        parser.add_argument("-rt", "--response_time",
+                            dest="RESPONSE_TIME",
+                            action='store',
+                            nargs=1,
+                            help="DETECTION METHOD(Ex -rt 30 )")
 
         parser.add_argument("-r", "--reverse",
                             dest="REVERSE",
@@ -191,10 +197,6 @@ def get_args():
                 "content_type": args.CONTENT_TYPE,
                 "cookie": args.COOKIE,
                 "fuzz": args.FUZZ,
-                "detect_allowed_chars": args.DETECT_ALLOWED_CHARS
-                #"param_overwriting": args.PARAM_OVERWRITING
+                "detect_allowed_chars": args.DETECT_ALLOWED_CHARS,
+                "response_time": args.RESPONSE_TIME
          }
-
-
-
-

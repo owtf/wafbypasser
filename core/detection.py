@@ -37,3 +37,14 @@ def resp_code_detection(response, args):
     if args["reverse"]:
         return not detection
     return detection
+
+
+def resp_time_detection(response, args):
+    time = float(args["time"])
+    detected = False
+    print response.request_time
+    if response.request_time > time:
+        detected = True
+    if args["reverse"]:
+        return not detected
+    return detected

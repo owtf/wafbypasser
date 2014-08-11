@@ -8,15 +8,16 @@ from core.argument_parser import get_args
 from core.fuzzer import Fuzzer
 from core.helper import load_payload_file, Error
 from core.http_helper import HTTPHelper
-from core.param_source_detector import detect_accepted_sources, create_request
-from core.response_analyzer import analyze_responses, print_request, print_response, analyze_chars, analyze_encoded_chars, analyze_accepted_sources
+from core.param_source_detector import detect_accepted_sources
+from core.response_analyzer import analyze_responses, print_request, \
+    print_response, analyze_chars, analyze_encoded_chars, \
+    analyze_accepted_sources
 from core.placeholder_manager import PlaceholderManager
 from core.obfuscation_lib import unicode_urlencode, urlencode
 import string
 
 
 class WAFBypasser:
-
     def fuzz(self, args, requests):
         if args["follow_cookies"] or args["delay"]:
             delay = args["delay"] or 0
@@ -30,11 +31,10 @@ class WAFBypasser:
         print "Fuzzing: Completed"
         return responses
 
-
     def is_detection_set(self, args):
-        if args["contains"] is None and args["resp_code_det"] is None:
+        if not (args["contains"] and args["resp_code_det"]
+                and args["resp_time_det"]):
             Error("You need to specify at least on Detection Function.")
-
 
     def require(self, args, params):
         param_missing = False
@@ -45,11 +45,9 @@ class WAFBypasser:
         if param_missing:
             Error("Missing Parameter(s).")
 
-
     def __init__(self):
         self.ua = "Mozilla/5.0 (X11; Linux i686; rv:6.0) Gecko/20100101 /" \
                   "Firefox/15.0"
-
         self.init_request = HTTPRequest("",
                                         auth_username=None,
                                         auth_password=None,
@@ -63,21 +61,17 @@ class WAFBypasser:
                                         proxy_password=None,
                                         user_agent=self.ua,
                                         request_timeout=30.0)
-        # ####
         self.sig = "@@@"
         self.length_signature = self.sig + "length" + self.sig
         self.fsig = self.sig + "fuzzhere" + self.sig  # fuzzing signature
         # template signature regular expression
-        self.template_signature_re = self.sig + \
-                                     "[^" + self.sig + "]+" + self.sig
-        # ####
+        self.template_signature_re = self.sig + "[^" + self.sig + "]+"
+        self.template_signature_re += self.sig
         self.detection_struct = []
-        self.pm = None
-        #self.http_helper = HTTPHelper(self.init_request)
-        #self.fuzzer = Fuzzer(self.http_helper)
-        #self.args =  FIXME
-        self.payload_path = {"asp": "./payloads/HPP/asp.txt",}
-
+        self.pm = None  # PlaceholderManager
+        self.http_helper = None
+        self.fuzzer = None
+        self.payload_path = {"asp": "./payloads/HPP/asp.txt", }
 
     def init_methods(self, args):
         methods = args["methods"] or []
@@ -95,7 +89,6 @@ class WAFBypasser:
                 methods.append("POST")  # Autodetect Method
         return methods
 
-
     def init_headers(self, args):
         headers = HTTPHeaders()
         if args["headers"]:
@@ -109,7 +102,6 @@ class WAFBypasser:
         if args["cookie"]:
             headers.add("Cookie", args["cookie"])
         return headers
-
 
     def init_detection_struct(self, args):
         if args["contains"]:
@@ -130,8 +122,16 @@ class WAFBypasser:
                 detection_args["reverse"] = True
             self.detection_struct.append({"method": resp_code_detection,
                                           "arguments": detection_args,
-                                          "info": "Contains"})
-
+                                          "info": "Response code detection"})
+        if args["response_time"]:
+            detection_args = {}
+            detection_args["time"] = args["response_time"][0]
+            detection_args["reverse"] = False
+            if args["reverse"]:
+                detection_args["reverse"] = True
+            self.detection_struct.append({"method": resp_time_detection,
+                                          "arguments": detection_args,
+                                          "info": "Response time detection"})
 
     def start(self, args):
         # Initiliazations
@@ -142,13 +142,10 @@ class WAFBypasser:
         headers = self.init_headers(args)
         data = args["data"] or ""
         self.init_detection_struct(args)
-        self.init_request.headers=headers
+        self.init_request.headers = headers
         self.http_helper = HTTPHelper(self.init_request)
         self.fuzzer = Fuzzer(self.http_helper)
-
-
-
-        #FIXME allow only one mode
+        # FIXME allow only one mode
         # Available Testing Modes
         #
         # Finding the length of a placeholder
@@ -183,7 +180,6 @@ class WAFBypasser:
             accepted_value = args["accepted_value"]
             param_source = args["param_source"]
 
-
             requests = detect_accepted_sources(self.http_helper,
                                                target,
                                                data,
@@ -217,18 +213,14 @@ class WAFBypasser:
                 print
         # HPP modes
         elif args["hpp"]:
-            self.require(args, ["param_name", "param_source"])
+            self.require(args, ["param_name", "param_source", "payloads"])
             param_name = args["param_name"]
             param_source = args["param_source"]
             self.is_detection_set(args)
-
+            payloads = []
+            for p_file in args["payloads"]:
+                payloads += load_payload_file(p_file)
             if args["hpp"] == "asp":
-
-                if args["payloads"]:
-                    payloads = load_payload_file(args["payloads"][0])
-                else:
-                    load_payload_file(self.payload_path["asp"])
-
                 print "Scanning mode: ASP HPP Parameter Splitting"
                 requests = asp_hpp(self.http_helper,
                                    methods,
@@ -239,10 +231,7 @@ class WAFBypasser:
                                    headers,
                                    data)
                 responses = self.fuzz(args, requests)
-
             elif args["hpp"] == "parameter_overwriting":
-                self.require(args, ["payloads"])
-                payloads = load_payload_file(args["payloads"][0])
                 requests = param_overwrite(self.http_helper,
                                            param_name,
                                            param_source,
@@ -262,48 +251,48 @@ class WAFBypasser:
                 payloads.append(chr(i))
 
             requests = self.pm.transformed_http_requests(self.http_helper,
-                                                     methods,
-                                                     target,
-                                                     payloads,
-                                                     headers,
-                                                     data)
+                                                         methods,
+                                                         target,
+                                                         payloads,
+                                                         headers,
+                                                         data)
             responses = self.fuzz(args, requests)
             sent_payloads = analyze_chars(responses,
-                          self.http_helper,
-                          self.detection_struct)
+                                          self.http_helper,
+                                          self.detection_struct)
             payloads = []
-            #urlencode bad_chars
+            # urlencode bad_chars
             print
             print "URL encoding bad characters"
             for bad_char in sent_payloads["detected"]:
                 payloads.append(urlencode(bad_char))
             requests = self.pm.transformed_http_requests(self.http_helper,
-                                                     methods,
-                                                     target,
-                                                     payloads,
-                                                     headers,
-                                                     data)
+                                                         methods,
+                                                         target,
+                                                         payloads,
+                                                         headers,
+                                                         data)
             responses = self.fuzz(args, requests)
             analyze_encoded_chars(responses,
-                          self.http_helper,
-                          self.detection_struct)
+                                  self.http_helper,
+                                  self.detection_struct)
 
             print
             print "UnicodeURL encoding bad characters"
             payloads = []
-            #unicode_urlencode_badchars
+            # unicode_urlencode_badchars
             for bad_char in sent_payloads["detected"]:
                 payloads.append(unicode_urlencode(bad_char))
             requests = self.pm.transformed_http_requests(self.http_helper,
-                                                     methods,
-                                                     target,
-                                                     payloads,
-                                                     headers,
-                                                     data)
+                                                         methods,
+                                                         target,
+                                                         payloads,
+                                                         headers,
+                                                         data)
             responses = self.fuzz(args, requests)
             analyze_encoded_chars(responses,
-                          self.http_helper,
-                          self.detection_struct)
+                                  self.http_helper,
+                                  self.detection_struct)
 
             if sent_payloads["detected"] is not []:
                 good_char = None
@@ -324,79 +313,74 @@ class WAFBypasser:
                 for bad_char in sent_payloads["detected"]:
                     payloads.append(bad_char + good_char)
                 requests = self.pm.transformed_http_requests(self.http_helper,
-                                                     methods,
-                                                     target,
-                                                     payloads,
-                                                     headers,
-                                                     data)
+                                                             methods,
+                                                             target,
+                                                             payloads,
+                                                             headers,
+                                                             data)
                 responses = self.fuzz(args, requests)
                 analyze_encoded_chars(responses,
-                          self.http_helper,
-                          self.detection_struct)
+                                      self.http_helper,
+                                      self.detection_struct)
                 print
                 print "Sending a detected char after an undetected"
                 payloads = []
                 for bad_char in sent_payloads["detected"]:
                     payloads.append(good_char + bad_char)
                 requests = self.pm.transformed_http_requests(self.http_helper,
-                                                         methods,
-                                                         target,
-                                                         payloads,
-                                                         headers,
-                                                         data)
+                                                             methods,
+                                                             target,
+                                                             payloads,
+                                                             headers,
+                                                             data)
                 responses = self.fuzz(args, requests)
                 analyze_encoded_chars(responses,
-                              self.http_helper,
-                              self.detection_struct)
+                                      self.http_helper,
+                                      self.detection_struct)
 
                 print "Sending an undetected char after a detected"
                 payloads = []
                 for bad_char in sent_payloads["detected"]:
                     payloads.append(bad_char + good_char)
                 requests = self.pm.transformed_http_requests(self.http_helper,
-                                                         methods,
-                                                         target,
-                                                         payloads,
-                                                         headers,
-                                                         data)
+                                                             methods,
+                                                             target,
+                                                             payloads,
+                                                             headers,
+                                                             data)
                 responses = self.fuzz(args, requests)
                 analyze_encoded_chars(responses,
-                              self.http_helper,
-                              self.detection_struct)
+                                      self.http_helper,
+                                      self.detection_struct)
 
                 print "Sending an detected char surrounded by undetected chars"
                 payloads = []
                 for bad_char in sent_payloads["detected"]:
                     payloads.append(good_char + bad_char + good_char)
                 requests = self.pm.transformed_http_requests(self.http_helper,
-                                                         methods,
-                                                         target,
-                                                         payloads,
-                                                         headers,
-                                                         data)
+                                                             methods,
+                                                             target,
+                                                             payloads,
+                                                             headers,
+                                                             data)
                 responses = self.fuzz(args, requests)
                 analyze_encoded_chars(responses,
-                              self.http_helper,
-                              self.detection_struct)
+                                      self.http_helper,
+                                      self.detection_struct)
 
         # Fuzzing mode
         elif args["fuzz"]:
             if PlaceholderManager.get_placeholder_number(
                     self.template_signature_re, str(args)) > 1:
-                Error("Multiple fuzzing placeholder signatures found." \
-                      " Only one fuzzing placeholder is supported.")
+                Error("Multiple fuzzing placeholder signatures found. "
+                      "Only one fuzzing placeholder is supported.")
 
             self.is_detection_set(args)
-
+            self.require(args, "payload")
             payloads = []
             if args["payloads"]:
-                for payload in args["payloads"]:
-                    payloads += load_payload_file(payload)
-            else:
-                pass
-                # FIXME add Payloads from payload collection
-                payloads.append("test")
-
+                for p_file in args["payloads"]:
+                    payloads += load_payload_file(p_file)
             print "Scanning mode: Fuzzing Using placeholders"
 
             requests = self.pm.transformed_http_requests(self.http_helper,
@@ -406,7 +390,6 @@ class WAFBypasser:
                                                          headers,
                                                          data)
             responses = self.fuzz(args, requests)
-
             analyze_responses(responses,
                               self.http_helper,
                               self.detection_struct)

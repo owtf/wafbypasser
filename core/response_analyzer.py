@@ -1,5 +1,5 @@
-import string
 #This module analyze and format the results
+import string
 
 
 def analyze_responses(responses, http_helper, detection_struct):
@@ -191,6 +191,3 @@ def analyze_accepted_sources(responses, detection_struct):
         print_response(resp)
         print
         print
-
-
-
