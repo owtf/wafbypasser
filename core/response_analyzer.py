@@ -187,7 +187,7 @@ def analyze_accepted_sources(responses, detection_struct):
     for resp in det_resp:
         print "[->]Request"
         print_request(resp)
-        print "[<-]Responce: "
+        print "[<-]Response: "
         print_response(resp)
         print
         print

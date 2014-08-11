@@ -18,6 +18,7 @@ import string
 
 
 class WAFBypasser:
+
     def fuzz(self, args, requests):
         if args["follow_cookies"] or args["delay"]:
             delay = args["delay"] or 0
@@ -32,9 +33,12 @@ class WAFBypasser:
         return responses
 
     def is_detection_set(self, args):
-        if not (args["contains"] and args["resp_code_det"]
-                and args["resp_time_det"]):
-            Error("You need to specify at least on Detection Function.")
+        det_functions = ["contains", "resp_code_det", "response_time"]
+        args_set = False
+        for name in det_functions:
+            if args[name] is not None:
+                return
+        Error("You need to specify at least on Detection Function.")
 
     def require(self, args, params):
         param_missing = False
@@ -64,14 +68,13 @@ class WAFBypasser:
         self.sig = "@@@"
         self.length_signature = self.sig + "length" + self.sig
         self.fsig = self.sig + "fuzzhere" + self.sig  # fuzzing signature
-        # template signature regular expression
+        # Template signature regular expression
         self.template_signature_re = self.sig + "[^" + self.sig + "]+"
         self.template_signature_re += self.sig
         self.detection_struct = []
         self.pm = None  # PlaceholderManager
         self.http_helper = None
         self.fuzzer = None
-        self.payload_path = {"asp": "./payloads/HPP/asp.txt", }
 
     def init_methods(self, args):
         methods = args["methods"] or []
@@ -134,7 +137,7 @@ class WAFBypasser:
                                           "info": "Response time detection"})
 
     def start(self, args):
-        # Initiliazations
+        # Initializations
         self.sig = args["fuzzing_signature"] or self.sig
         self.pm = PlaceholderManager(self.sig)
         target = args["target"]
@@ -145,16 +148,15 @@ class WAFBypasser:
         self.init_request.headers = headers
         self.http_helper = HTTPHelper(self.init_request)
         self.fuzzer = Fuzzer(self.http_helper)
-        # FIXME allow only one mode
-        # Available Testing Modes
-        #
+
         # Finding the length of a placeholder
-        if args["length"]:
+        if args["mode"] == "length":
+            self.require("accepted_value")
             self.is_detection_set(args)
             if len(methods) > 1:
                 Error("Only you need to specify only one Method")
             print "Scanning mode: Length Detection"
-            ch = args["length"][0][0]
+            ch = args["accepted_value"][0]
             length = find_length(self.http_helper,
                                  self.length_signature,
                                  target,
@@ -165,7 +167,8 @@ class WAFBypasser:
                                  data)
             print "Placeholder Allowed Length = " + str(length)
         # Detecting Allowed Sources
-        elif args["detect_allowed_sources"]:
+        elif args["mode"] == "detect_accepted_sources":
+            self.is_detection_set(args)
             self.require(args, ["methods",
                                 "param_name",
                                 "accepted_value",
@@ -191,7 +194,7 @@ class WAFBypasser:
             responses = self.fuzz(args, requests)
             analyze_accepted_sources(responses, self.detection_struct)
 
-        elif args["content_type"]:
+        elif args["mode"] == "content_type_tamper":
             print "Tampering Content-Type mode"
             cnt_types = load_payload_file("./payloads/HTTP/content_types.txt")
             self.http_helper.add_header_param(headers,
@@ -212,7 +215,7 @@ class WAFBypasser:
                 print_response(response)
                 print
         # HPP modes
-        elif args["hpp"]:
+        elif args["mode"] == "asp_hpp" or args["mode"] == "param_overwriting":
             self.require(args, ["param_name", "param_source", "payloads"])
             param_name = args["param_name"]
             param_source = args["param_source"]
@@ -220,7 +223,7 @@ class WAFBypasser:
             payloads = []
             for p_file in args["payloads"]:
                 payloads += load_payload_file(p_file)
-            if args["hpp"] == "asp":
+            if args["mode"] == "asp_hpp":
                 print "Scanning mode: ASP HPP Parameter Splitting"
                 requests = asp_hpp(self.http_helper,
                                    methods,
@@ -231,7 +234,7 @@ class WAFBypasser:
                                    headers,
                                    data)
                 responses = self.fuzz(args, requests)
-            elif args["hpp"] == "parameter_overwriting":
+            elif args["mode"] == "param_overwriting":
                 requests = param_overwrite(self.http_helper,
                                            param_name,
                                            param_source,
@@ -244,7 +247,7 @@ class WAFBypasser:
                               self.http_helper,
                               self.detection_struct)
 
-        elif args["detect_allowed_chars"]:
+        elif args["mode"] == "detect_chars":
             self.is_detection_set(args)
             payloads = []
             for i in range(0, 256):
@@ -293,7 +296,7 @@ class WAFBypasser:
             analyze_encoded_chars(responses,
                                   self.http_helper,
                                   self.detection_struct)
-
+            # Finding a white-listed character
             if sent_payloads["detected"] is not []:
                 good_char = None
                 for char in string.letters:
@@ -369,7 +372,7 @@ class WAFBypasser:
                                       self.detection_struct)
 
         # Fuzzing mode
-        elif args["fuzz"]:
+        elif args["mode"] == "fuzz":
             if PlaceholderManager.get_placeholder_number(
                     self.template_signature_re, str(args)) > 1:
                 Error("Multiple fuzzing placeholder signatures found. "

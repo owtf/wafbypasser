@@ -32,13 +32,13 @@ def get_args():
                             help="Additional headers \
                             (ex -header 'Name:value' 'Name2:value2')")
 
-        parser.add_argument("-L", "--length",
-                            dest="LENGTH",
-                            action='store',
-                            nargs=1,
-                            help="Finds the Length of a content placeholder. \
-                                 Parameter is a valid fuzzing character\
-                                 (Ex -L 'A')")
+        #parser.add_argument("-L", "--length",
+        #                    dest="LENGTH",
+        #                    action='store',
+        #                    nargs=1,
+        #                    help="Finds the Length of a content placeholder. \
+        #                         Parameter is a valid fuzzing character\
+        #                         (Ex -L 'A')")
 
         parser.add_argument("-d", "--data",
                             dest="DATA",
@@ -91,13 +91,13 @@ def get_args():
         #                    action='store',
         #                    help="HPP parameter name")
 
-        parser.add_argument("-hpp", "--hpp_attack_method",
-                            dest="HPP",
-                            action='store',
-                            choices=['asp', "parameter_overwriting"],
-                            help="ASP attacking method splits the payload at \
-                            the ',' character and send an http request with \
-                             multiple instances of the same parameter.")
+        #parser.add_argument("-hpp", "--hpp_attack_method",
+        #                    dest="HPP",
+        #                    action='store',
+        #                    choices=['asp', "parameter_overwriting"],
+        #                    help="ASP attacking method splits the payload at \
+        #                    the ',' character and send an http request with \
+        #                     multiple instances of the same parameter.")
 
         parser.add_argument("-fs", "--fuzzing_signature",
                             dest="FUZZING_SIG",
@@ -105,13 +105,13 @@ def get_args():
                             help="The default fuzzing signature is @@@.\
                              You can change it with a custom signature.")
 
-        parser.add_argument("-das", "--detect_allowed_sources",
-                            dest="DETECT_ALLOWED_SOURCES",
-                            action='store_true',
-                            help="This functionality detects the the allowed \
-                             sources for a parameter. (Ex if the web app is \
-                             handling a parameter in way like \
-                             $REQUEST[param]).")
+        #parser.add_argument("-das", "--detect_allowed_sources",
+        #                    dest="DETECT_ALLOWED_SOURCES",
+        #                    action='store_true',
+        #                    help="This functionality detects the the allowed \
+        #                     sources for a parameter. (Ex if the web app is \
+        #                     handling a parameter in way like \
+        #                     $REQUEST[param]).")
 
         #parser.add_argument("-am", "--accepted_method",
         #                    dest="ACCEPTED_METHOD",
@@ -155,21 +155,30 @@ def get_args():
                                  Allows you to follow cookies and specify a \
                                  delay time in seconds before sending a \
                                  request.")
-        parser.add_argument("-ct", "--content-type",
-                            dest="CONTENT_TYPE",
-                            action='store_true',
-                            help="This will fuzz the Content-Type with a/"
-                                 " list of content types.")
-        parser.add_argument("-f", "--fuzz",
-                            dest="FUZZ",
-                            action='store_true',
-                            help="Start the fuzzing mode.")
+        #parser.add_argument("-ct", "--content-type",
+        #                    dest="CONTENT_TYPE",
+        #                    action='store_true',
+        #                    help="This will fuzz the Content-Type with a/"
+        #                         " list of content types.")
+        #parser.add_argument("-f", "--fuzz",
+        #                    dest="FUZZ",
+        #                    action='store_true',
+        #                    help="Start the fuzzing mode.")
 
-        parser.add_argument("-dac", "--detect_allowed_chars",
-                            dest="DETECT_ALLOWED_CHARS",
-                            action='store_true',
-                            help="Start the fuzzing mode.")
+        #parser.add_argument("-dac", "--detect_allowed_chars",
+        #                    dest="DETECT_ALLOWED_CHARS",
+        #                    action='store_true',
+        #                    help="Start the fuzzing mode.")
 
+        parser.add_argument("-m", "--mode",
+                            dest="MODE",
+                            required=True,
+                            choices=['fuzz', 'detect_chars','asp_hpp',
+                                     'param_overwriting', "length",
+                                     "detect_accepted_sources",
+                                     "content_type_tamper"],
+                            action='store',
+                            help="Select the scan mode...") #FixME
         #parser.add_argument("-po", "--param-overwriting",
         #                    dest="PARAM_OVERWRITING",
         #                    action='store_true',
@@ -182,21 +191,22 @@ def get_args():
                 "headers": args.HEADERS,
                 "methods": args.METHODS,
                 "data": args.DATA,
-                "length": args.LENGTH,
+                #"length": args.LENGTH,
                 "contains": args.CONTAINS,
                 "resp_code_det": args.RESP_CODE_DET,
                 "reverse": args.REVERSE,
-                "hpp": args.HPP,
+                #"hpp": args.HPP,
                 "fuzzing_signature": args.FUZZING_SIG,
-                "detect_allowed_sources": args.DETECT_ALLOWED_SOURCES,
+                #"detect_allowed_sources": args.DETECT_ALLOWED_SOURCES,
                 "accepted_value": args.ACCEPTED_VALUE,
                 "param_name": args.PARAM_NAME,
                 "param_source": args.PARAM_SOURCE,
                 "delay": args.DELAY,
                 "follow_cookies": args.FOLLOW_COOKIES,
-                "content_type": args.CONTENT_TYPE,
+                #"content_type": args.CONTENT_TYPE,
                 "cookie": args.COOKIE,
-                "fuzz": args.FUZZ,
-                "detect_allowed_chars": args.DETECT_ALLOWED_CHARS,
-                "response_time": args.RESPONSE_TIME
+                #"fuzz": args.FUZZ,
+                #"detect_allowed_chars": args.DETECT_ALLOWED_CHARS,
+                "response_time": args.RESPONSE_TIME,
+                "mode": args.MODE
          }
