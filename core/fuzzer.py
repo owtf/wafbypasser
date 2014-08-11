@@ -1,5 +1,4 @@
 from time import sleep
-
 from tornado import ioloop
 from tornado.httpclient import AsyncHTTPClient, HTTPClient, HTTPError
 from core.http_helper import HTTPHelper
@@ -38,6 +37,8 @@ class Fuzzer:
             ioloop.IOLoop.instance().stop()
 
     def sync_fuzz(self, requests, delay=0, follow_cookies=True):
+        ''' This is the synchronous fuzzing engine. Useful for fuzzing with
+        delays and fuzzing that follows cookies'''
         self.reset()
         http_client = HTTPClient()
         cookie = None

@@ -91,10 +91,11 @@ def binary_search(http_helper, lsig, minv, maxv, url, method, detection_struct,
         response = e.response
 
     for struct in detection_struct:
-       if struct["method"](response, struct["arguments"]):
+        if struct["method"](response, struct["arguments"]):
             http_client.close()
             return binary_search(http_helper,
-                                 lsig, minv,
+                                 lsig,
+                                 minv,
                                  mid - 1,
                                  url,
                                  method,
@@ -103,13 +104,13 @@ def binary_search(http_helper, lsig, minv, maxv, url, method, detection_struct,
                                  headers,
                                  body)
     http_client.close()
-    return binary_search(
-        http_helper,
-        lsig, mid + 1,
-        maxv,
-        url,
-        method,
-        detection_struct,
-        ch,
-        headers,
-        body)
+    return binary_search(http_helper,
+                         lsig,
+                         mid + 1,
+                         maxv,
+                         url,
+                         method,
+                         detection_struct,
+                         ch,
+                         headers,
+                         body)

@@ -6,7 +6,7 @@ from time import time
 class HTTPHelper:
 
     def __init__(self, init_request):
-        # relates a payload with an http request. Needed for async fuzzing.
+        # Links a payload with an http request. Needed for async fuzzing.
         # variable schema payload_table[id(request)] = payload
         self.payload_table = {}
         self.init_request = init_request

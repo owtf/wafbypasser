@@ -65,6 +65,7 @@ def get_args():
         parser.add_argument("-rt", "--response_time",
                             dest="RESPONSE_TIME",
                             action='store',
+                            type=float,
                             nargs=1,
                             help="DETECTION METHOD(Ex -rt 30 )")
 
@@ -176,7 +177,8 @@ def get_args():
                             choices=['fuzz', 'detect_chars','asp_hpp',
                                      'param_overwriting', "length",
                                      "detect_accepted_sources",
-                                     "content_type_tamper"],
+                                     "content_type_tamper",
+                                     "show_transform_functions"],
                             action='store',
                             help="Select the scan mode...") #FixME
         #parser.add_argument("-po", "--param-overwriting",

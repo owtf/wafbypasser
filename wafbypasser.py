@@ -13,7 +13,8 @@ from core.response_analyzer import analyze_responses, print_request, \
     print_response, analyze_chars, analyze_encoded_chars, \
     analyze_accepted_sources
 from core.placeholder_manager import PlaceholderManager
-from core.obfuscation_lib import unicode_urlencode, urlencode
+from core.obfuscation_lib import unicode_urlencode, urlencode, \
+    transformations_info
 import string
 
 
@@ -209,9 +210,9 @@ class WAFBypasser:
                 data)
             responses = self.fuzz(args, requests)
             for response in responses:
-                print "Request"
+                print "[->]Request"
                 print_request(response)
-                print "Response"
+                print "[<-]Response"
                 print_response(response)
                 print
         # HPP modes
@@ -264,7 +265,7 @@ class WAFBypasser:
                                           self.http_helper,
                                           self.detection_struct)
             payloads = []
-            # urlencode bad_chars
+            # urlencode blocked chars
             print
             print "URL encoding bad characters"
             for bad_char in sent_payloads["detected"]:
@@ -283,7 +284,7 @@ class WAFBypasser:
             print
             print "UnicodeURL encoding bad characters"
             payloads = []
-            # unicode_urlencode_badchars
+            # unicode urlencode blocked chars
             for bad_char in sent_payloads["detected"]:
                 payloads.append(unicode_urlencode(bad_char))
             requests = self.pm.transformed_http_requests(self.http_helper,
@@ -312,7 +313,7 @@ class WAFBypasser:
                 print
                 print "Sending a detected char followed by an undetected"
                 payloads = []
-                # add good char infront of bad char
+                # add an accepted char before a blocked char
                 for bad_char in sent_payloads["detected"]:
                     payloads.append(bad_char + good_char)
                 requests = self.pm.transformed_http_requests(self.http_helper,
@@ -379,7 +380,7 @@ class WAFBypasser:
                       "Only one fuzzing placeholder is supported.")
 
             self.is_detection_set(args)
-            self.require(args, "payload")
+            self.require(args, ["payloads"])
             payloads = []
             if args["payloads"]:
                 for p_file in args["payloads"]:
@@ -396,6 +397,8 @@ class WAFBypasser:
             analyze_responses(responses,
                               self.http_helper,
                               self.detection_struct)
+        elif args["mode"] == "show_transform_functions":
+            print transformations_info()
 
 
 if __name__ == "__main__":

@@ -1,5 +1,4 @@
 from lxml import etree
-
 from core import obfuscation_lib
 
 
@@ -30,7 +29,8 @@ class XMLAnalyzer(object):
         try:
             function = self.linking_table[tag]
         except KeyError:
-            print "Parser Warning: Unknown starting tag found (" + tag + "). Ignoring..."
+            print "Parser Warning: Unknown starting tag found ("\
+                  + tag + "). Ignoring..."
             return
 
         self.stack.append(["F", function])
@@ -87,8 +87,7 @@ class TemplateParser(object):
         self.linking_table = obfuscation_lib.get_transformations()
         self.linking_table.update({"payload": self.payload})
         self.linking_table.update(
-            {"transform_payload":
-            self.transform_payload})
+            {"transform_payload": self.transform_payload})
 
     def transform_payload(self, string):
         """Return the output.

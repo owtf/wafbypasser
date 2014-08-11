@@ -21,6 +21,35 @@ def get_transformations():
         "unicode_urlencode": unicode_urlencode
     }
 
+
+def transformations_info():
+        info = ""
+        info += "Base64 encoding. Usage <base64>...</base64>\n"
+        info += "URL safe base64 encoding. Usage <urlsafe_base64>..." \
+                "</urlsafe_base64>\n"
+        info += "HEX encoding. Usage <hex>...</hex>\n"
+        info += "remove_space transformation. Usage <remove_space>..." \
+                "</remove_spaces>\n"
+        info += "Urlencode encoding. Usage <urlencode>...</urlencode>\n"
+        info += "Xmlcharrefreplace encoding. Usage <xmlcharrefreplace>..." \
+                "</xmlcharrefreplace>\n"
+        info += "Html_escape encoding. Usage <html_escape>...</html_escape>\n"
+        info += "UTF-8 encoding. Usage <utf8>...</utf8>\n"
+        info += "UTF-16 encoding. Usage <utf16>...</utf16>\n"
+        info += "UTF-32 encoding. Usage <utf32>...</utf32>\n"
+        info += "Replace tranformation. Usage <replace string1=\"A\" " \
+                "string2=\"B\" >...</replace>\n. This will replace A with B." \
+                " It is important to have the attribute in the correct" \
+                " order.\n"
+        info += "Remove new lines transformation. Usage <remove_newlines>..." \
+                "</remove_newlines>\n"
+        info += "Unicode urlencode encoding. Usage <unicode_urlencode>..." \
+                "</unicode_urlencode>\n"
+        info += "loading payloads from file <payload/>. You need to specify " \
+                "the file with the payloads. Example, encoding payloads to" \
+                " base64 <base64><payload/></base64>"
+        return info
+
 #credits to wafw00f and http://packetstormsecurity.org/web/unicode-fun.txt
 urlunicodechars = {' ': '%u0020',
                    '/': '%u2215',

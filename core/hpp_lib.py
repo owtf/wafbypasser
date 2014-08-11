@@ -1,16 +1,8 @@
 import urlparse
 from http_helper import HTTPHelper
 
-# ##########################################  # ASP HPP Functions
-#
-# www.example.com?index.asp?<asp_hpp/ param_name=email >
-# variable name
-# header, body or url
-#   type of hpp
-#   tokens
-#   number of tokens (optional)
-#  --hpp url,body,cookie param_name asp(optional)
 
+# HPP Functions
 
 def asp_hpp(http_helper, methods, payloads, param_name, source, url,
             headers, body=None):
@@ -97,7 +89,6 @@ def param_overwrite(http_helper, param, accepted_source, payload, url, body,
         new_url = HTTPHelper.add_url_param(url, param, "")
         new_body = HTTPHelper.add_body_param(body, param, payload)
         new_headers = HTTPHelper.add_cookie_param(headers, param, payload)
-
 
         requests.append(http_helper.create_http_request(
                         "GET",

@@ -16,11 +16,11 @@ def analyze_responses(responses, http_helper, detection_struct):
                 break
         if not detected:
             undet_resp.append(response)
-            print str(response)
     print "Detected Requests"
     for resp in det_resp:
         print
         payload = http_helper.get_payload(resp)
+
         print_request(resp, payload)
         det_payloads.append(payload)
     print
@@ -30,6 +30,7 @@ def analyze_responses(responses, http_helper, detection_struct):
         payload = http_helper.get_payload(resp)
         print_request(resp, payload)
         undet_payloads.append(payload)
+    print
     print "List of Detected Payloads"
     for payload in sorted(det_payloads):
         print payload
@@ -74,6 +75,7 @@ def format_headers(headers):
     if formatted_headers is "":
         return format_headers
     return formatted_headers[:-2]
+
 
 def analyze_chars(responses, http_helper, detection_struct):
     problematic_chars = ["\n", "\r", "\t", chr(11), chr(12)]
@@ -124,6 +126,7 @@ def analyze_chars(responses, http_helper, detection_struct):
     print
     return {"detected": det_payloads,
             "undetected": undet_payloads}
+
 
 def analyze_encoded_chars(responses, http_helper, detection_struct):
     det_resp = []
