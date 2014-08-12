@@ -2,7 +2,7 @@ import argparse
 
 
 def get_args():
-        parser = argparse.ArgumentParser(description='OWTF WAF-BYPASER MODULE')
+        parser = argparse.ArgumentParser(description='OWTF WAF-BYPASSER MODULE')
 
         parser.add_argument("-X", "--method",
                             dest="METHODS",
@@ -32,13 +32,13 @@ def get_args():
                             help="Additional headers \
                             (ex -header 'Name:value' 'Name2:value2')")
 
-        #parser.add_argument("-L", "--length",
-        #                    dest="LENGTH",
-        #                    action='store',
-        #                    nargs=1,
-        #                    help="Finds the Length of a content placeholder. \
-        #                         Parameter is a valid fuzzing character\
-        #                         (Ex -L 'A')")
+        parser.add_argument("-L", "--length",
+                            dest="LENGTH",
+                            action='store',
+                            nargs=1,
+                            type=int,
+                            help="Specify the length of accepted chars. "
+                                 "Required in overchar mode")
 
         parser.add_argument("-d", "--data",
                             dest="DATA",
@@ -58,8 +58,8 @@ def get_args():
                             dest="RESP_CODE_DET",
                             action='store',
                             nargs=1,
-                            help="DETECTION METHOD(Ex1 -rcd 200  \n)\n" \
-                                 "(Ex2 -rcd 400,404)+\n(ex3 rcd 200-400)\n)" \
+                            help="DETECTION METHOD(Ex1 -rcd 200  \n)"
+                                 "(Ex2 -rcd 400,404)+\n(ex3 rcd 200-400)\n "
                                  "(Ex4 -rcd 100,200-300)")
 
         parser.add_argument("-rt", "--response_time",
@@ -178,7 +178,7 @@ def get_args():
                                      'param_overwriting', "length",
                                      "detect_accepted_sources",
                                      "content_type_tamper",
-                                     "show_transform_functions"],
+                                     "show_transform_functions", "overchar"],
                             action='store',
                             help="Select the scan mode...") #FixME
         #parser.add_argument("-po", "--param-overwriting",
@@ -193,7 +193,6 @@ def get_args():
                 "headers": args.HEADERS,
                 "methods": args.METHODS,
                 "data": args.DATA,
-                #"length": args.LENGTH,
                 "contains": args.CONTAINS,
                 "resp_code_det": args.RESP_CODE_DET,
                 "reverse": args.REVERSE,
@@ -209,6 +208,7 @@ def get_args():
                 "cookie": args.COOKIE,
                 #"fuzz": args.FUZZ,
                 #"detect_allowed_chars": args.DETECT_ALLOWED_CHARS,
+                "length": args.LENGTH,
                 "response_time": args.RESPONSE_TIME,
                 "mode": args.MODE
          }

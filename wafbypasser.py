@@ -65,7 +65,7 @@ class WAFBypasser:
                                         proxy_username=None,
                                         proxy_password=None,
                                         user_agent=self.ua,
-                                        request_timeout=30.0)
+                                        request_timeout=40.0)
         self.sig = "@@@"
         self.length_signature = self.sig + "length" + self.sig
         self.fsig = self.sig + "fuzzhere" + self.sig  # fuzzing signature
@@ -152,7 +152,7 @@ class WAFBypasser:
 
         # Finding the length of a placeholder
         if args["mode"] == "length":
-            self.require("accepted_value")
+            self.require("accepted_value") #fixme list?
             self.is_detection_set(args)
             if len(methods) > 1:
                 Error("Only you need to specify only one Method")
@@ -399,6 +399,28 @@ class WAFBypasser:
                               self.detection_struct)
         elif args["mode"] == "show_transform_functions":
             print transformations_info()
+
+        elif args["mode"] == "overchar":
+            self.require(args, ["payloads", "accepted_value"])
+            length = int(args["length"][0])
+            accepted_value = args["accepted_value"][0]
+            payloads = []
+            for p_file in args["payloads"]:
+                payloads += load_payload_file(p_file)
+            payloads = [(length - len( payload )) * accepted_value + payload
+                        for payload in payloads]
+            requests = self.pm.transformed_http_requests(self.http_helper,
+                                                         methods,
+                                                         target,
+                                                         payloads,
+                                                         headers,
+                                                         data)
+            responses = self.fuzz(args, requests)
+            analyze_responses(responses,
+                          self.http_helper,
+                          self.detection_struct)
+        else:
+            Error("Unknown bypassing mode.")
 
 
 if __name__ == "__main__":
