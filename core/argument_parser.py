@@ -81,48 +81,11 @@ def get_args():
                             nargs='*',
                             help="FILE with payloads')(Ex file1 , file2)")
 
-        #parser.add_argument("-hpps", "--hpp_source",
-        #                    dest="HPP_SOURCE",
-        #                    action='store',
-        #                    choices=['url', 'data', 'cookie'],
-        #                    help="Options: URL, DATA or COOKIE")
-
-        #parser.add_argument("-hppp", "--hpp_param_name",
-        #                    dest="HPP_PARAM_NAME",
-        #                    action='store',
-        #                    help="HPP parameter name")
-
-        #parser.add_argument("-hpp", "--hpp_attack_method",
-        #                    dest="HPP",
-        #                    action='store',
-        #                    choices=['asp', "parameter_overwriting"],
-        #                    help="ASP attacking method splits the payload at \
-        #                    the ',' character and send an http request with \
-        #                     multiple instances of the same parameter.")
-
         parser.add_argument("-fs", "--fuzzing_signature",
                             dest="FUZZING_SIG",
                             action='store',
                             help="The default fuzzing signature is @@@.\
                              You can change it with a custom signature.")
-
-        #parser.add_argument("-das", "--detect_allowed_sources",
-        #                    dest="DETECT_ALLOWED_SOURCES",
-        #                    action='store_true',
-        #                    help="This functionality detects the the allowed \
-        #                     sources for a parameter. (Ex if the web app is \
-        #                     handling a parameter in way like \
-        #                     $REQUEST[param]).")
-
-        #parser.add_argument("-am", "--accepted_method",
-        #                    dest="ACCEPTED_METHOD",
-        #                    action='store',
-        #                    help="The accepted Method")
-
-        #parser.add_argument("-apv", "--accepted_param_value",
-        #                    dest="ACCEPTED_PARAM_VALUE",
-        #                    action='store',
-        #                    help="Accepted parameter value")
 
         parser.add_argument("-apv", "--accepted_value",
                             dest="ACCEPTED_VALUE",
@@ -156,20 +119,6 @@ def get_args():
                                  Allows you to follow cookies and specify a \
                                  delay time in seconds before sending a \
                                  request.")
-        #parser.add_argument("-ct", "--content-type",
-        #                    dest="CONTENT_TYPE",
-        #                    action='store_true',
-        #                    help="This will fuzz the Content-Type with a/"
-        #                         " list of content types.")
-        #parser.add_argument("-f", "--fuzz",
-        #                    dest="FUZZ",
-        #                    action='store_true',
-        #                    help="Start the fuzzing mode.")
-
-        #parser.add_argument("-dac", "--detect_allowed_chars",
-        #                    dest="DETECT_ALLOWED_CHARS",
-        #                    action='store_true',
-        #                    help="Start the fuzzing mode.")
 
         parser.add_argument("-m", "--mode",
                             dest="MODE",
@@ -180,12 +129,25 @@ def get_args():
                                      "content_type_tamper",
                                      "show_transform_functions", "overchar"],
                             action='store',
-                            help="Select the scan mode...") #FixME
-        #parser.add_argument("-po", "--param-overwriting",
-        #                    dest="PARAM_OVERWRITING",
-        #                    action='store_true',
-        #                    help="This will use HPP to test if a parameter \ "
-        #                         "can be over-writen")
+                            help="Select mode:"
+                                 "(fuzz)Fuzzing mode.\n"
+                                 "(detect_chars)Detects the available "
+                                 "characters and attempts to find bypasses.\n"
+                                 "(asp_hpp)Splits the payload to comma (,) "
+                                 "character and sends using HPP\n"
+                                 "(param_overwriting)Overwrites a parameter"
+                                 " by using HPP\n"
+                                 "(length)Detects the length of a content "
+                                 "placeholder\n"
+                                 "(detect_accepted_sources)Detected the "
+                                 "accepted sources of a parameter\n"
+                                 "(content_type_tamper)Content type tampering "
+                                 "is changing the Content-Type header and"
+                                 " tries to detect anomalies.\n"
+                                 "(show_tranform_function) Shows "
+                                 "transformation functions\n"
+                                 "(overchar)Sends the payloads after a stream "
+                                 "of whitelisted characters\n")
 
         args = parser.parse_args()
         return {"target": args.TARGET,
@@ -196,18 +158,13 @@ def get_args():
                 "contains": args.CONTAINS,
                 "resp_code_det": args.RESP_CODE_DET,
                 "reverse": args.REVERSE,
-                #"hpp": args.HPP,
                 "fuzzing_signature": args.FUZZING_SIG,
-                #"detect_allowed_sources": args.DETECT_ALLOWED_SOURCES,
                 "accepted_value": args.ACCEPTED_VALUE,
                 "param_name": args.PARAM_NAME,
                 "param_source": args.PARAM_SOURCE,
                 "delay": args.DELAY,
                 "follow_cookies": args.FOLLOW_COOKIES,
-                #"content_type": args.CONTENT_TYPE,
                 "cookie": args.COOKIE,
-                #"fuzz": args.FUZZ,
-                #"detect_allowed_chars": args.DETECT_ALLOWED_CHARS,
                 "length": args.LENGTH,
                 "response_time": args.RESPONSE_TIME,
                 "mode": args.MODE
