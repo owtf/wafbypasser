@@ -11,7 +11,7 @@ class HTTPHelper:
         self.payload_table = {}
         self.init_request = init_request
 
-    def create_http_request(self, method, url, body=None, headers=None,
+    def create_http_request(self, method, url, body=None, headers={},
                             payload=None):
         """This function creates an HTTP request with some additional
          initializations"""
@@ -19,9 +19,9 @@ class HTTPHelper:
         request = copy(self.init_request)
         request.method = method
         request.url = url
+        request.headers = headers
         if body:
             request.body = body
-            request.headers = headers
             if headers and not "Content-Length" in request.headers:
                 #request.headers["Content-Length"] = len(body)
                 pass
@@ -38,7 +38,10 @@ class HTTPHelper:
         return self.payload_table
 
     def get_payload(self, response):
-        return self.payload_table[id(response.request)]
+        try:
+            return self.payload_table[id(response.request)]
+        except KeyError:
+            return "->Payload not Loaded from File"
 
     @staticmethod
     def add_url_param(url, param_name, param_value):

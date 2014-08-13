@@ -39,7 +39,7 @@ class WAFBypasser:
         for name in det_functions:
             if args[name] is not None:
                 return
-        Error("You need to specify at least on Detection Function.")
+        Error("You need to specify at least one Detection Function.")
 
     def require(self, args, params):
         param_missing = False
@@ -152,7 +152,7 @@ class WAFBypasser:
 
         # Finding the length of a placeholder
         if args["mode"] == "length":
-            self.require("accepted_value") #fixme list?
+            self.require(args, ["accepted_value"])
             self.is_detection_set(args)
             if len(methods) > 1:
                 Error("Only you need to specify only one Method")
@@ -198,15 +198,15 @@ class WAFBypasser:
         elif args["mode"] == "content_type_tamper":
             print "Tampering Content-Type mode"
             cnt_types = load_payload_file("./payloads/HTTP/content_types.txt")
-            self.http_helper.add_header_param(headers,
+            new_headers = self.http_helper.add_header_param(headers,
                                               "Content-Type", self.fsig)
             self.pm = PlaceholderManager(self.sig)
             requests = self.pm.transformed_http_requests(
                 self.http_helper,
                 methods,
                 target,
-                cnt_types,
-                headers,
+                cnt_types, # Payloads
+                new_headers,
                 data)
             responses = self.fuzz(args, requests)
             for response in responses:
@@ -380,11 +380,12 @@ class WAFBypasser:
                       "Only one fuzzing placeholder is supported.")
 
             self.is_detection_set(args)
-            self.require(args, ["payloads"])
             payloads = []
             if args["payloads"]:
                 for p_file in args["payloads"]:
                     payloads += load_payload_file(p_file)
+            else:
+                payloads.append("")
             print "Scanning mode: Fuzzing Using placeholders"
 
             requests = self.pm.transformed_http_requests(self.http_helper,
@@ -397,6 +398,7 @@ class WAFBypasser:
             analyze_responses(responses,
                               self.http_helper,
                               self.detection_struct)
+
         elif args["mode"] == "show_transform_functions":
             print transformations_info()
 

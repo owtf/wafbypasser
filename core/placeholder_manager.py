@@ -89,6 +89,5 @@ class PlaceholderManager:
                                                           new_body,
                                                           new_headers,
                                                           payload)
-
                 requests.append(request)
         return requests

@@ -53,14 +53,16 @@ def print_request(response, payload=None):
     print "Method: " + response.request.method
     if response.request.body is not None:
         print "Post Data: " + response.request.body
-    print "Request Headers: " + format_headers(response.request.headers)
+    if response.request.headers:
+        print "Request Headers: " + format_headers(response.request.headers)
     if payload is not None:
         print "Payload: " + payload
 
 
 def print_response(response):
     print "Code: " + str(response.code)
-    print "Headers: " + format_headers(response.headers)
+    if response.headers:
+        print "Headers: " + format_headers(response.headers)
     body = response.body
     if len(body) > 140:
         print "Body (140 chars): " + body[:70] + " ... " + body[-70:]
