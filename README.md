@@ -47,7 +47,7 @@ This mode is splitting the payload at the comma ',' character and it is sending
 it to a different variable
 
 ```sh-session
-python wafbypasser.py -t http://127.0.0.1/xss.php -pl hpp.txt --contains 'whatever' --hpp_param_name xss --hpp_source url --hpp_attack_method asp -X GET
+python wafbypasser.py -t http://127.0.0.1/xss.php -pl ./Backups/hpp.txt --contains 'whatever' --param_name xss --param_source URL  -m asp_hpp
 ```
 
 + Detecting Allowed sources
