@@ -198,14 +198,15 @@ class WAFBypasser:
         elif args["mode"] == "content_type_tamper":
             print "Tampering Content-Type mode"
             cnt_types = load_payload_file("./payloads/HTTP/content_types.txt")
-            new_headers = self.http_helper.add_header_param(headers,
-                                              "Content-Type", self.fsig)
+            new_headers = self.http_helper.add_header_param(
+                headers,
+                "Content-Type", self.fsig)
             self.pm = PlaceholderManager(self.sig)
             requests = self.pm.transformed_http_requests(
                 self.http_helper,
                 methods,
                 target,
-                cnt_types, # Payloads
+                cnt_types,  # Payloads
                 new_headers,
                 data)
             responses = self.fuzz(args, requests)
@@ -374,11 +375,13 @@ class WAFBypasser:
 
         # Fuzzing mode
         elif args["mode"] == "fuzz":
-            if PlaceholderManager.get_placeholder_number(
-                    self.template_signature_re, str(args)) > 1:
+            fuzzing_placeholders = PlaceholderManager.get_placeholder_number(
+                    self.template_signature_re, str(args))
+            if fuzzing_placeholders> 1:
                 Error("Multiple fuzzing placeholder signatures found. "
                       "Only one fuzzing placeholder is supported.")
-
+            elif fuzzing_placeholders == 0:
+                Error("No fuzzing placeholder signatures found.")
             self.is_detection_set(args)
             payloads = []
             if args["payloads"]:
@@ -409,7 +412,7 @@ class WAFBypasser:
             payloads = []
             for p_file in args["payloads"]:
                 payloads += load_payload_file(p_file)
-            payloads = [(length - len( payload )) * accepted_value + payload
+            payloads = [(length - len(payload)) * accepted_value + payload
                         for payload in payloads]
             requests = self.pm.transformed_http_requests(self.http_helper,
                                                          methods,
@@ -419,8 +422,8 @@ class WAFBypasser:
                                                          data)
             responses = self.fuzz(args, requests)
             analyze_responses(responses,
-                          self.http_helper,
-                          self.detection_struct)
+                              self.http_helper,
+                              self.detection_struct)
         else:
             Error("Unknown bypassing mode.")
 
