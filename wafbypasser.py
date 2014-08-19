@@ -267,39 +267,39 @@ class WAFBypasser:
                                           self.detection_struct)
             payloads = []
             # urlencode blocked chars
-            print
-            print "URL encoding bad characters"
-            for bad_char in sent_payloads["detected"]:
-                payloads.append(urlencode(bad_char))
-            requests = self.pm.transformed_http_requests(self.http_helper,
-                                                         methods,
-                                                         target,
-                                                         payloads,
-                                                         headers,
-                                                         data)
-            responses = self.fuzz(args, requests)
-            analyze_encoded_chars(responses,
-                                  self.http_helper,
-                                  self.detection_struct)
+            if sent_payloads["detected"]:
+                print
+                print "URL encoding bad characters"
+                for bad_char in sent_payloads["detected"]:
+                    payloads.append(urlencode(bad_char))
+                requests = self.pm.transformed_http_requests(self.http_helper,
+                                                             methods,
+                                                             target,
+                                                             payloads,
+                                                             headers,
+                                                             data)
+                responses = self.fuzz(args, requests)
+                analyze_encoded_chars(responses,
+                                      self.http_helper,
+                                      self.detection_struct)
 
-            print
-            print "UnicodeURL encoding bad characters"
-            payloads = []
-            # unicode urlencode blocked chars
-            for bad_char in sent_payloads["detected"]:
-                payloads.append(unicode_urlencode(bad_char))
-            requests = self.pm.transformed_http_requests(self.http_helper,
-                                                         methods,
-                                                         target,
-                                                         payloads,
-                                                         headers,
-                                                         data)
-            responses = self.fuzz(args, requests)
-            analyze_encoded_chars(responses,
-                                  self.http_helper,
-                                  self.detection_struct)
+                print
+                print "UnicodeURL encoding bad characters"
+                payloads = []
+                # unicode urlencode blocked chars
+                for bad_char in sent_payloads["detected"]:
+                    payloads.append(unicode_urlencode(bad_char))
+                requests = self.pm.transformed_http_requests(self.http_helper,
+                                                             methods,
+                                                             target,
+                                                             payloads,
+                                                             headers,
+                                                             data)
+                responses = self.fuzz(args, requests)
+                analyze_encoded_chars(responses,
+                                      self.http_helper,
+                                      self.detection_struct)
             # Finding a white-listed character
-            if sent_payloads["detected"] is not []:
                 good_char = None
                 for char in string.letters:
                     good_char = char
