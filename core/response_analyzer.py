@@ -2,6 +2,38 @@
 import string
 
 
+def format_char(char):
+    """Converts a character to printable format"""
+    if char in string.ascii_letters:
+        return char
+    if char in string.digits:
+        return char
+    if char in string.punctuation:
+        return char
+    if char in string.whitespace:
+        if char == " ":
+            return "[SPACE]"
+        if char == "\t":
+            return "[TAB]"
+        if char == "\r":
+            return "[CARRIAGE RETURN]"
+        if char == "\x0B":
+            return "[VERTICAL TAB]"
+        if char == "\x0C":
+            return "[NEW PAGE - FORM FEED]"
+        if char == "\n":
+            return "[NEW-LINE]"
+    else:
+        return "[ASCII: " + str(ord(char)) + "]"
+
+
+def formatted_string(str):
+    ret = ""
+    for char in str:
+        ret += format_char(char)
+    return ret
+
+
 def analyze_responses(responses, http_helper, detection_struct):
     det_resp = []
     undet_resp = []
@@ -100,27 +132,27 @@ def analyze_chars(responses, http_helper, detection_struct):
     for resp in undet_resp:
         payload = http_helper.get_payload(resp)
         undet_payloads.append(payload)
-    print "List of Detected Characters"
+    print "[!]List of Detected Characters"
     counter = 0
     for payload in sorted(det_payloads):
-        if payload in string.printable and payload not in problematic_chars:
-            print "Char: " + payload + " ascii(" + str(ord(payload)) + ")",
-        else:
-            print "Special char" + " ascii(" + str(ord(payload)) + ")",
+        #if payload in string.printable and payload not in problematic_chars:
+        #    print "Char: " + payload + " ascii(" + str(ord(payload)) + ")",
+        #else:
+        #   print "Special char" + " ascii(" + str(ord(payload)) + ")",
+        print formatted_string(payload),
         counter += 1
-        if counter % 4 == 0:
+        if counter % 6 == 0:
             print "    "
-    print
-    print "List of UnDetected Characters"
+    print "\n"
+    print "[!]List of UnDetected Characters"
     counter = 0
     for payload in sorted(undet_payloads):
-        if payload in string.printable and payload not in problematic_chars:
-            print "char: " + payload + " ascii(" + str(ord(payload)) + ")",
-        else:
-            print "Special char" + " ascii(" + str(ord(payload)) + ")",
+        print formatted_string(payload),
         counter += 1
-        if counter % 4 == 0:
-            print "    "
+        if counter % 6 == 0:
+            print
+    if counter is not 6:
+        print
     print
     print "Number 0f HTTP requests: " + str(len(responses))
     print "Number 0f Detected HTTP requests: " + str(len(det_resp))
@@ -150,21 +182,13 @@ def analyze_encoded_chars(responses, http_helper, detection_struct):
     for resp in undet_resp:
         payload = http_helper.get_payload(resp)
         undet_payloads.append(payload)
-    print "List of Detected Characters"
-    counter = 0
+    print "[!]List of Detected Characters"
     for payload in sorted(det_payloads):
-        print "URL encoded char: " + payload,
-        counter += 1
-        if counter % 4 == 0:
-            print "    "
+        print "URL encoded char: " + formatted_string(payload)
     print
-    print "List of UnDetected Characters"
-    counter = 0
+    print "[!]List of UnDetected Characters"
     for payload in sorted(undet_payloads):
-        print "char: " + payload,
-        counter += 1
-        if counter % 4 == 0:
-            print "    "
+        print "char: " + formatted_string(payload)
     print
     print "Number 0f HTTP requests: " + str(len(responses))
     print "Number 0f Detected HTTP requests: " + str(len(det_resp))

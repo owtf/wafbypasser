@@ -31,6 +31,7 @@ class WAFBypasser:
             print "Asynchronous Fuzzing: Started"
             responses = self.fuzzer.async_fuzz(requests)
         print "Fuzzing: Completed"
+        print
         return responses
 
     def is_detection_set(self, args):
@@ -269,7 +270,7 @@ class WAFBypasser:
             # urlencode blocked chars
             if sent_payloads["detected"]:
                 print
-                print "URL encoding bad characters"
+                print "URL encoding detected characters"
                 for bad_char in sent_payloads["detected"]:
                     payloads.append(urlencode(bad_char))
                 requests = self.pm.transformed_http_requests(self.http_helper,
@@ -284,7 +285,7 @@ class WAFBypasser:
                                       self.detection_struct)
 
                 print
-                print "UnicodeURL encoding bad characters"
+                print "UnicodeURL encoding detected characters"
                 payloads = []
                 # unicode urlencode blocked chars
                 for bad_char in sent_payloads["detected"]:
